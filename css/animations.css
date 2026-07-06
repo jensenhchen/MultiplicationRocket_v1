@@ -1,0 +1,328 @@
+#rocket {
+  transition: bottom 450ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+#rocket.is-idle {
+  animation: rocket-idle 2.8s ease-in-out infinite;
+}
+
+#rocket.is-correct {
+  animation: rocket-launch 650ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+#rocket.is-correct .flame,
+#rocket.is-correct .smoke-trail,
+#rocket.is-correct .sparkles,
+#rocket.is-correct .rocket-glow ellipse {
+  opacity: 1;
+}
+
+#rocket.is-correct .flame {
+  animation: flame-flicker 180ms ease-in-out infinite;
+}
+
+#rocket.is-correct .smoke-trail {
+  animation: smoke-puff 650ms ease-out;
+}
+
+#rocket.is-correct .sparkles {
+  animation: sparkle-burst 650ms ease-out;
+}
+
+#rocket.is-correct .rocket-glow ellipse {
+  animation: glow-pop 650ms ease-out;
+}
+
+#rocket.is-wrong {
+  animation: rocket-wrong 520ms ease;
+}
+
+#rocket.is-wrong .smoke-trail,
+#rocket.is-wrong .oops-bubble {
+  opacity: 1;
+}
+
+#rocket.is-wrong .smile {
+  opacity: 0;
+}
+
+#rocket.is-wrong .oops-mouth {
+  opacity: 1;
+}
+
+#rocket.is-wrong .smoke-trail {
+  animation: smoke-puff 520ms ease-out;
+}
+
+#rocket.is-complete {
+  animation: rocket-complete 950ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+#rocket.is-complete .flame,
+#rocket.is-complete .sparkles,
+#rocket.is-complete .rocket-glow ellipse {
+  opacity: 1;
+}
+
+.rocket-area.is-wrong {
+  animation: wrong-flash 520ms ease;
+}
+
+.rocket-area.is-complete .fireworks {
+  opacity: 1;
+}
+
+.rocket-area.is-complete .fireworks span {
+  animation: firework 950ms ease-out both;
+}
+
+.fireworks span {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff4cf;
+  box-shadow:
+    0 -26px 0 #fff4cf,
+    22px -12px 0 #ff6b6b,
+    22px 12px 0 #4df0b2,
+    0 26px 0 #ffd166,
+    -22px 12px 0 #ffffff,
+    -22px -12px 0 #7cc6ff;
+}
+
+.fireworks span:nth-child(1) {
+  left: 22%;
+  top: 28%;
+}
+
+.fireworks span:nth-child(2) {
+  right: 24%;
+  top: 36%;
+  animation-delay: 160ms;
+}
+
+.fireworks span:nth-child(3) {
+  left: 50%;
+  top: 18%;
+  animation-delay: 280ms;
+}
+
+.pulse {
+  animation: soft-pulse 320ms ease;
+}
+
+.sky-mark {
+  animation: star-twinkle 2.4s ease-in-out infinite;
+}
+
+.cloud-one {
+  animation: cloud-drift 11s ease-in-out infinite alternate;
+}
+
+.cloud-two {
+  animation: cloud-drift 13s ease-in-out infinite alternate-reverse;
+}
+
+.star-two {
+  animation-delay: 550ms;
+}
+
+.star-three {
+  animation-delay: 1100ms;
+}
+
+@keyframes rocket-idle {
+  0% {
+    transform: translate3d(-50%, 0, 0) rotate(-3deg);
+  }
+
+  50% {
+    transform: translate3d(-50%, -8px, 0) rotate(3deg);
+  }
+
+  100% {
+    transform: translate3d(-50%, 0, 0) rotate(-3deg);
+  }
+}
+
+@keyframes rocket-launch {
+  0% {
+    transform: translate3d(-50%, 10px, 0) scale(1);
+  }
+
+  45% {
+    transform: translate3d(-50%, -26px, 0) scale(1.08);
+  }
+
+  100% {
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+}
+
+@keyframes rocket-wrong {
+  0%,
+  100% {
+    transform: translate3d(-50%, 0, 0) rotate(0deg);
+  }
+
+  18% {
+    transform: translate3d(calc(-50% - 10px), 10px, 0) rotate(-8deg);
+  }
+
+  36% {
+    transform: translate3d(calc(-50% + 10px), 14px, 0) rotate(8deg);
+  }
+
+  54% {
+    transform: translate3d(calc(-50% - 7px), 10px, 0) rotate(-5deg);
+  }
+
+  72% {
+    transform: translate3d(calc(-50% + 5px), 6px, 0) rotate(4deg);
+  }
+}
+
+@keyframes rocket-complete {
+  0% {
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+
+  70% {
+    transform: translate3d(-50%, -44px, 0) scale(1.08);
+  }
+
+  100% {
+    transform: translate3d(-50%, -18px, 0) scale(1.02);
+  }
+}
+
+@keyframes soft-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.12);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes flame-flicker {
+  0%,
+  100% {
+    transform: scaleY(0.86);
+  }
+
+  50% {
+    transform: scaleY(1.12);
+  }
+}
+
+@keyframes smoke-puff {
+  0% {
+    opacity: 0.85;
+    transform: translateY(0) scale(0.7);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(18px) scale(1.4);
+  }
+}
+
+@keyframes sparkle-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  35% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes glow-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes wrong-flash {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+
+  35% {
+    box-shadow: inset 0 0 0 999px rgba(214, 69, 69, 0.12);
+  }
+}
+
+@keyframes firework {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+
+  35% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@keyframes cloud-drift {
+  0% {
+    transform: translate3d(-8px, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(12px, -4px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}

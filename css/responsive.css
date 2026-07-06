@@ -1,0 +1,169 @@
+@media (max-width: 720px) {
+  :root {
+    --screen-gap: clamp(7px, 1.8vh, 12px);
+  }
+
+  .game-shell {
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
+  }
+
+  .hero {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.55rem, 8vw, 2.4rem);
+  }
+
+  .hero p {
+    font-size: 0.98rem;
+  }
+
+  .hero-controls {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .rocket-badge {
+    flex-basis: 58px;
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    font-size: 2.2rem;
+  }
+
+  .panel {
+    padding: clamp(10px, 3.2vw, 16px);
+  }
+
+  .screen-heading {
+    display: block;
+  }
+
+  .text-button {
+    margin-top: 10px;
+  }
+
+  .group-board,
+  .competition-grid,
+  .group-stats,
+  .result-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .level-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .level-card {
+    min-height: 76px;
+  }
+
+  .rocket-area {
+    height: clamp(122px, 25vh, 170px);
+  }
+
+  .answer-button {
+    min-height: clamp(60px, 9vh, 76px);
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1180px) {
+  .game-shell {
+    width: min(880px, 100%);
+  }
+
+  .panel {
+    padding: 28px;
+  }
+
+  .answer-button {
+    min-height: 96px;
+  }
+}
+
+@media (max-width: 390px) {
+  .hero {
+    display: grid;
+    grid-template-columns: auto 1fr;
+  }
+
+  .hero-controls {
+    grid-column: 1 / -1;
+  }
+
+  .stats span {
+    font-size: 0.72rem;
+  }
+
+  .question {
+    font-size: clamp(1.8rem, 12vw, 2.8rem);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 760px) {
+  .game-shell {
+    width: min(980px, 100%);
+  }
+
+  .hero {
+    margin-bottom: 10px;
+  }
+
+  .hero p {
+    display: none;
+  }
+
+  .rocket-area {
+    height: clamp(104px, 24vh, 145px);
+    margin: 10px 0;
+  }
+
+  .question {
+    margin: 10px 0;
+    font-size: clamp(2rem, 8vw, 3.6rem);
+  }
+
+  .answer-button {
+    min-height: 60px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .hero {
+    display: none;
+  }
+
+  .panel {
+    padding: 10px;
+  }
+
+  .stats {
+    margin-bottom: 7px;
+  }
+
+  .rocket-area {
+    height: 90px;
+  }
+
+  #rocket {
+    width: clamp(54px, 11vw, 78px);
+  }
+
+  .hint,
+  .message {
+    margin-top: 7px;
+    min-height: 20px;
+  }
+}

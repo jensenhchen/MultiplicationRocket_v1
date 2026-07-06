@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 180" role="img" aria-label="Multiplication Rocket">
+  <ellipse cx="60" cy="92" rx="38" ry="70" fill="#ffd166" opacity="0.22"/>
+  <path d="M39 116 15 152 45 142Z" fill="#ff6b6b" stroke="#d64545" stroke-width="2"/>
+  <path d="M81 116 105 152 75 142Z" fill="#ff6b6b" stroke="#d64545" stroke-width="2"/>
+  <path d="M60 8C30 33 25 85 39 129c5 16 37 16 42 0C95 85 90 33 60 8Z" fill="#fff" stroke="#d8ebff" stroke-width="3"/>
+  <circle cx="60" cy="66" r="18" fill="#2667ff"/>
+  <circle cx="60" cy="66" r="11" fill="#bdefff"/>
+  <path d="M51 99q9 9 18 0" fill="none" stroke="#172033" stroke-linecap="round" stroke-width="4"/>
+  <path d="M43 139c2 23 15 35 17 39 2-4 15-16 17-39Z" fill="#ff9f1c"/>
+  <path d="M53 140c1 16 7 25 7 28 0-3 6-12 7-28Z" fill="#fff4cf"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 80" role="img" aria-label="Rocket smoke">
+  <g fill="#fff" opacity="0.82">
+    <circle cx="38" cy="46" r="20"/>
+    <circle cx="68" cy="34" r="26"/>
+    <circle cx="102" cy="44" r="22"/>
+    <circle cx="132" cy="36" r="18"/>
+  </g>
+</svg>
