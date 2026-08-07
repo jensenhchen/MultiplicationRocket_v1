@@ -1,7 +1,7 @@
 {
-  "name": "Multiplication Rocket",
-  "short_name": "Rocket Math",
-  "description": "A cheerful offline multiplication practice game for children learning 1x1 to 9x9 tables.",
+  "name": "Math Rocket: + - * /",
+  "short_name": "Math Rocket",
+  "description": "A cheerful offline game for practising addition, subtraction, multiplication, and division.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

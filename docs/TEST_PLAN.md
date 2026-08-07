@@ -1,74 +1,73 @@
 # Test Plan
 
-## Desktop Browser Test Cases
+## Automated Checks
 
-- Open `index.html` in Chrome, Edge, Firefox, and Safari where available.
-- Confirm the start screen loads with Group 1 CXY, Group 2 CXR, and competition buttons.
-- Confirm there is no horizontal scrolling at 320px, 375px, 390px, 430px, 768px, 1024px, and desktop widths.
-- Start CXY Easy, Medium, and Hard and confirm questions stay within 1-5, 1-7, and 1-9.
-- Start CXR Easy, Medium, and Hard and confirm questions stay within 11-13, 11-16, and 11-20.
-- Answer correctly and confirm score increases by 10.
-- Answer incorrectly and confirm the correct answer is shown.
-- Confirm the rocket idles, boosts on correct answers, shakes on wrong answers, and celebrates at mission complete.
-- Confirm sound effects play only after the first user interaction.
-- Confirm Sound On/Off and Music On/Off toggles work.
-- Finish a mission and confirm score, best score, time, and review display.
-- Finish a mission and confirm correct/total and correction rate display.
-- Run a full CXY vs CXR competition and confirm CXR starts after CXY.
-- Confirm competition result compares CXY and CXR by accuracy, then time.
-- Use keyboard number keys to select visible single-digit answers.
-- Confirm there are no browser console errors.
+- Run `node --check` on every file in `js/` and `tests/`.
+- Run `node tests/core.test.js`.
+- Confirm the core test covers both groups, all operation sets, all difficulties, and all number ranges.
+- Confirm generated operands stay in range, divisions are exact, intermediate values are safe integers, choices are unique, and each set has ten unique signatures.
+- Confirm previous-result lookup occurs before a new result replaces it.
+- Confirm a retry ID earns stars only once.
+- Confirm accuracy and speed competition rules, including a draw.
 
-## iPad Safari Test Cases
+## Start Screen
 
-- Open the GitHub Pages URL in iPad Safari.
-- Confirm the layout fits iPad Mini, iPad Air, iPad Pro 11-inch, and iPad Pro 13-inch screen sizes.
-- Confirm buttons are easy to tap and at least 60px tall.
-- Confirm Safari safe areas do not cover content.
-- Play a full mission in portrait.
-- Play a full mission in landscape.
-- Confirm the Sound and Music settings persist after closing and reopening the Home Screen app.
+- Confirm the title is `Math Rocket: + - * /` and the English subtitle is correct.
+- Confirm Group 1 is CXY and Group 2 is Challenger.
+- Confirm each group has Operations, Difficulty, Number Range, and Start controls.
+- Confirm CXY defaults to Addition & Subtraction, Medium, 1–10.
+- Confirm Challenger defaults to Addition & Subtraction, Medium, 1–15.
+- Change each select and confirm the competition summaries update.
+- Confirm no old second-group name is visible.
 
-## Add To Home Screen Test
+## Practice
 
-- Open the game in iPad Safari.
-- Tap Share > Add to Home Screen.
-- Confirm the name appears as `Rocket Math`.
-- Launch from the Home Screen icon.
-- Confirm the app opens in standalone mode without Safari browser chrome.
+- Complete a 10-question mission for each operation set.
+- Confirm question progress, mission settings, stars, time, feedback, hint, and rocket state update.
+- Confirm keyboard keys 1–4 choose the corresponding answer position.
+- Confirm result accuracy and time match the completed mission.
+- Repeat an identical mission and confirm the comparison uses the prior result.
+- Change one setting and confirm it reports the first result for that distinct mission.
 
-## Offline Test
+## Retry
 
-- Load the GitHub Pages URL while online.
-- Wait at least 5 seconds for the service worker to install.
-- Turn on Airplane Mode.
-- Reopen the installed Home Screen app.
-- Confirm the game loads and can start a mission.
-- Open a missing page while offline and confirm the offline fallback appears.
+- Finish a mission with at least one wrong answer.
+- Confirm each wrong expression shows the chosen and correct answers.
+- Start retry and answer one item incorrectly; confirm it returns later.
+- Correct all missed questions and confirm 5 stars are added once per item.
+- Confirm reopening the same result cannot award the same retry ID again.
+- Finish a perfect mission and confirm the perfect message, sound, and celebration appear without a retry button.
 
-## Rotation Test
+## Competition
 
-- Start a game in portrait and rotate to landscape.
-- Confirm question, answer buttons, score, timer, hint, and rocket remain visible.
-- Rotate back to portrait and confirm there is no overlap or clipped text.
+- Start a competition and confirm CXY plays first for 10 questions.
+- Confirm the transition screen does not reveal a final winner.
+- Start Challenger and complete 10 questions.
+- Confirm both score cards show settings, correct count, accuracy, time, stars, and previous matching result comparison.
+- Confirm accuracy wins before speed, speed breaks an accuracy tie, and exact ties display Draw.
+- Confirm winner/draw bonuses are applied once.
+- Retry missed questions for each group and confirm the winner stays unchanged.
 
-## Touch Button Test
+## localStorage
 
-- Tap each level button.
-- Tap each answer position.
-- Tap Show hint.
-- Tap Play again.
-- Confirm no double-tap zoom occurs during normal play.
-- Confirm accidental text selection does not happen during gameplay.
+- Reload and confirm total stars, group stars, stats, histories, audio settings, and retry completion remain.
+- Insert valid data under the previous progress key, reload, and confirm it migrates without crashing.
+- Insert malformed JSON and confirm the game still loads with defaults.
+- Reset progress and confirm only Math Rocket progress keys are removed; audio preferences remain.
 
-## localStorage Test
+## Responsive and Accessibility
 
-- Play one mission with at least one wrong answer.
-- Return to the start screen.
-- Confirm best score, total stars, and last played date are shown.
-- Confirm CXY and CXR group stat cards show last correct/total, last time, and overall rate.
-- Confirm weak table badges appear after wrong answers.
-- Complete one competition and confirm competition history is saved.
-- Toggle sound and music settings, reload the page, and confirm the settings are restored.
-- Reload the page and confirm progress is restored.
-- Tap Reset progress and confirm saved progress clears.
+- Check 320, 375, 390, 430, 768, 1024, and desktop widths with no horizontal scrolling.
+- Test iPad portrait and landscape plus a short-height landscape viewport.
+- Confirm controls are comfortably touchable and focus indicators are visible.
+- Navigate selects, buttons, answer choices, hints, retry, and competition by keyboard.
+- Confirm live result/feedback regions announce changes without duplicating text.
+- Enable reduced motion and confirm transitions become minimal without hiding state changes.
+
+## Audio, PWA, and Offline
+
+- Confirm sound and music start only after interaction and toggles persist.
+- Serve through localhost or HTTPS and confirm service worker registration has no unhandled errors.
+- Load once online, go offline, and confirm the app shell, styles, scripts, icons, and game remain available.
+- Confirm manifest name, short name, start URL, icons, and standalone display.
+- Confirm a new service worker cache version replaces older app caches.

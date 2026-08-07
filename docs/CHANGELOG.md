@@ -1,34 +1,35 @@
 # Changelog
 
+## 2.0.1 - 2026-08-07
+
+- Aligned both Group cards so matching selectors and Start buttons share the same vertical positions.
+- Brightened the CXY and Challenger card backgrounds without changing button colours.
+- Widened and tuned the responsive shell for Windows desktops, iPad, iPhone, and Android phone layouts.
+- Updated the PWA cache version for the refreshed styles.
+
+## 2.0.0 - 2026-08-07
+
+- Expanded Math Rocket from a single-operation game to all four basic operations.
+- Added configurable operation sets, operand-count difficulty, and group-specific number ranges.
+- Renamed the second user-facing group to Challenger and added legacy local-data migration.
+- Added safe structured expression generation with exact division and non-negative integer steps.
+- Added per-configuration previous-result comparison.
+- Added missed-question retry queues with one-time bonus stars.
+- Added CXY vs Challenger competition, winner/draw bonuses, separate reviews, and winner celebration.
+- Added total and per-group star tracking with versioned browser-only storage.
+- Added keyboard shortcuts, improved responsive configuration cards, and expanded accessibility labels.
+- Updated branding, PWA metadata, offline pages, cache version, product requirements, and test coverage.
+
 ## 1.2.0 - 2026-07-07
 
-- Added Group 1 `CXY` for original Easy, Medium, and Hard levels.
-- Added Group 2 `CXR` for 11x11 to 20x20 multiplication practice.
-- Added CXR Easy, Medium, and Hard ranges.
-- Added CXY vs CXR competition mode.
-- Added per-group time, correct/total, and correction-rate tracking.
-- Added competition result comparison and saved competition history.
-- Updated start screen, result screen, README, and test plan for group play.
+- Added two-group practice and sequential competition.
+- Added per-group time, accuracy, score, and locally saved history.
 
 ## 1.1.0 - 2026-07-06
 
-- Improved responsive layout for iPhone, iPad, Android phones/tablets, and desktop browsers.
-- Replaced the main emoji rocket with a vivid SVG rocket scene.
-- Added idle, correct-answer, wrong-answer, and completion rocket animations.
-- Added flame, smoke, sparkle, cloud, red-flash, moon, and firework effects.
-- Added Web Audio API sound effects and optional background music.
-- Added sound and music toggles with saved preferences.
-- Added lightweight SVG image assets for rocket, smoke, stars, and clouds.
-- Updated service worker cache for the new files.
-- Updated README documentation for responsive design, sound controls, animation features, and compatibility.
+- Added responsive layouts, the SVG rocket scene, animations, Web Audio effects, music controls, and saved preferences.
+- Added reduced-motion support and offline-friendly local assets.
 
 ## 1.0.0 - 2026-07-06
 
-- Prepared project for GitHub Pages deployment.
-- Added Progressive Web App manifest, icons, and service worker.
-- Added offline fallback page and GitHub Pages 404 page.
-- Split JavaScript into app, game, UI, question, storage, animation, and utility files.
-- Split CSS into base, responsive, and animation files.
-- Added iPad Safari Home Screen support and safe-area styling.
-- Added localStorage progress tracking for best score, stars, wrong questions, weak tables, and last played date.
-- Added documentation, test plan, license, robots file, and `.nojekyll`.
+- Added the static PWA shell, manifest, icons, service worker, offline fallback, modular JavaScript, responsive CSS, and browser-only progress tracking.

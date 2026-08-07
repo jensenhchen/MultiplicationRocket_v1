@@ -2,7 +2,8 @@
   "use strict";
 
   const RocketMath = window.RocketMath || {};
-  const AUDIO_KEY = "multiplicationRocket.audio.v1";
+  const AUDIO_KEY = "mathRocket.audio.v2";
+  const LEGACY_AUDIO_KEY = "multiplicationRocket.audio.v1";
   const DEFAULT_SETTINGS = {
     soundEnabled: true,
     musicEnabled: false
@@ -14,8 +15,11 @@
 
   function loadSettings() {
     try {
-      const saved = window.localStorage.getItem(AUDIO_KEY);
-      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
+      const saved = window.localStorage.getItem(AUDIO_KEY)
+        || window.localStorage.getItem(LEGACY_AUDIO_KEY);
+      const loaded = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
+      window.localStorage.setItem(AUDIO_KEY, JSON.stringify(loaded));
+      return loaded;
     } catch (error) {
       return { ...DEFAULT_SETTINGS };
     }
@@ -91,6 +95,12 @@
         { frequency: 880, duration: 0.06, type: "square", volume: 0.025 },
         { frequency: 990, duration: 0.06, type: "square", volume: 0.025, delay: 0.07 },
         { frequency: 1175, duration: 0.12, type: "triangle", volume: 0.04, delay: 0.16 }
+      ],
+      winner: [
+        { frequency: 523, duration: 0.09, type: "sine", volume: 0.05 },
+        { frequency: 659, duration: 0.09, type: "sine", volume: 0.05, delay: 0.08 },
+        { frequency: 784, duration: 0.09, type: "sine", volume: 0.055, delay: 0.16 },
+        { frequency: 1047, duration: 0.22, type: "triangle", volume: 0.06, delay: 0.25 }
       ]
     };
 

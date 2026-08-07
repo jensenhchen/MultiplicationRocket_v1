@@ -1,4 +1,4 @@
-const CACHE_NAME = "multiplication-rocket-v1.2.0";
+const CACHE_NAME = "math-rocket-v2.0.1";
 const BASE_URL = self.registration.scope;
 
 const REQUIRED_ASSETS = [

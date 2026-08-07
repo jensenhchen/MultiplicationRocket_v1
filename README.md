@@ -1,164 +1,85 @@
-# Multiplication Rocket
+# Math Rocket: + - * /
 
-Multiplication Rocket is a cheerful browser game for children learning multiplication. The child picks a group and mission level, answers 10 questions, earns stars, gets hints, reviews mistakes, and watches a rocket launch higher with each correct answer.
+Math Rocket is a cheerful, offline-friendly browser game for children practising addition, subtraction, multiplication, and division. A child configures a 10-question mission, earns stars, compares the result with the last matching mission, retries missed questions, and can play a two-person CXY vs Challenger competition.
 
-The project is static and GitHub Pages friendly. It uses only HTML5, CSS3, and vanilla JavaScript. There is no backend, login, database, npm, build tool, CDN, or paid API.
+The project is a static Progressive Web App. It uses HTML5, CSS3, and vanilla JavaScript only: no backend, login, database, npm, build tool, CDN, external API, or analytics. Progress never leaves the browser and is saved only in `localStorage`.
 
 ## Features
 
-- Group 1 `CXY` with Easy, Medium, and Hard levels for 1x1 to 9x9 practice
-- Group 2 `CXR` with Easy, Medium, and Hard levels for 11x11 to 20x20 practice
-- CXY vs CXR competition mode with side-by-side result comparison
-- Score, timer, hints, encouraging messages, and wrong-answer review
-- Responsive layout for iPhone, iPad, Android phones/tablets, Windows, and macOS browsers
-- Vivid SVG rocket with idle, correct-answer, wrong-answer, and completion animations
-- Flame, smoke, sparkles, clouds, moon, and celebration effects
-- Sound effects for button taps, correct answers, wrong answers, rocket boost, completion, and perfect score
-- Optional soft background music generated with the Web Audio API
-- Sound and music toggles saved in `localStorage`
-- Progress saved in `localStorage`: best score, total stars, wrong questions, weak tables, group stats, competition history, and last played date
-- Installable Progressive Web App on iPad and supported desktop/mobile browsers
-- Offline support after the first successful load
-- Relative paths for GitHub Pages subfolder deployment
-- `prefers-reduced-motion` support
+- Group 1 `CXY` and Group 2 `Challenger`
+- Three operation sets: addition/subtraction, multiplication/division, or all four operations
+- Easy (2 numbers), Medium (3 numbers), and Hard (4 numbers)
+- CXY ranges: 1–10, 1–15, and 1–20
+- Challenger ranges: 1–15, 1–25, and 1–30
+- Ten unique, balanced multiple-choice questions per main mission
+- Exact division, non-negative subtraction, integer results, and age-appropriate result limits
+- Per-configuration comparison with the previous matching mission
+- Retry queue for missed questions, repeated until correct
+- Base, retry, winner, and draw star rewards
+- CXY-first, Challenger-second competition with accuracy and time comparison
+- Responsive rocket scene, encouragement, music, sound effects, and celebration animation
+- Installable PWA and offline app shell
+- Keyboard answer shortcuts 1–4, touch-friendly controls, safe areas, and reduced-motion support
 
-## Browser Compatibility
+## Mission Settings
 
-Test targets:
+| Group | Default | Number ranges |
+| --- | --- | --- |
+| CXY | Addition & Subtraction · Medium · 1–10 | 1–10, 1–15, 1–20 |
+| Challenger | Addition & Subtraction · Medium · 1–15 | 1–15, 1–25, 1–30 |
 
-- iPad Safari
-- iPhone Safari
-- Android Chrome
-- Windows Chrome and Edge
-- macOS Safari and Chrome
+Difficulty controls the number of operands: Easy has 2, Medium has 3, and Hard has 4. Multi-step expressions use explicit parentheses and are evaluated safely without `eval()`.
 
-The layout uses responsive CSS, Flexbox, CSS Grid, `clamp()`, safe-area `env()` values, and touch-friendly controls with minimum 60px gameplay buttons.
+## Child-Friendly Generation Rules
 
-## Folder Structure
+- Every displayed operand stays inside the selected range.
+- Subtraction and every intermediate step stay non-negative.
+- Division is exact and never divides by zero.
+- Result limits are centralized in `js/questions.js`:
+  - CXY: 40 (Easy), 80 (Medium), 120 (Hard)
+  - Challenger: 100 (Easy), 180 (Medium), 300 (Hard)
+- Multiplication factor limits prevent chains of very large products.
+- Selected operators are rotated across each 10-question set for balanced coverage.
+- Four distinct choices are generated for every question, including exactly one correct answer.
 
-```text
-/
-|-- index.html
-|-- manifest.json
-|-- service-worker.js
-|-- offline.html
-|-- 404.html
-|-- README.md
-|-- LICENSE
-|-- robots.txt
-|-- .nojekyll
-|-- css/
-|   |-- style.css
-|   |-- responsive.css
-|   `-- animations.css
-|-- js/
-|   |-- app.js
-|   |-- game.js
-|   |-- ui.js
-|   |-- questions.js
-|   |-- storage.js
-|   |-- audio.js
-|   |-- animation.js
-|   `-- utils.js
-|-- assets/
-|   |-- icons/
-|   |-- images/
-|   `-- sounds/
-`-- docs/
-```
+## Stars
 
-## Sound Controls
+- Correct on the first attempt: 10 stars
+- Correct during missed-question retry: 5 stars, once per original missed question
+- Competition winner: 20 bonus stars
+- Exact draw: 10 bonus stars per group
 
-The game uses small Web Audio API tones instead of external audio files. This keeps the project offline-friendly and avoids licensing issues.
+Competition winners are determined only by the original 10 questions. Higher accuracy wins; equal accuracy is decided by shorter time; matching accuracy and time is a draw.
 
-- `Sound On/Off` controls effects.
-- `Music On/Off` controls soft looping background music.
-- Audio starts only after a user interaction, which respects iOS and Android autoplay rules.
-- Preferences are saved automatically in `localStorage`.
+## Local Data
 
-## Groups And Competition
+`js/storage.js` stores versioned progress under `mathRocket.progress.v2`. It includes total and per-group stars, recent practice and competition history, last results by exact mission configuration, missed questions, retry completion, group statistics, and dates. The loader can migrate the previous progress key and maps the previous second-group statistics to Challenger.
 
-Practice groups:
-
-- `CXY`: original multiplication practice.
-  - Easy: 1 to 5
-  - Medium: 1 to 7
-  - Hard: 1 to 9
-- `CXR`: larger multiplication practice.
-  - Easy: 11 to 13
-  - Medium: 11 to 16
-  - Hard: 11 to 20
-
-Competition mode:
-
-1. Choose `Compete Easy`, `Compete Medium`, or `Compete Hard`.
-2. CXY plays first.
-3. CXR plays second with the matching difficulty.
-4. The game compares correct answers, correction rate, and time.
-5. Higher accuracy wins. If accuracy is tied, the faster time wins.
+Audio settings are stored separately. Storage failures are caught so the game remains playable in private browsing or when storage is unavailable.
 
 ## Run Locally
 
-Open `index.html` in a browser for a quick check. Service workers require `https://` or `localhost`, so offline/PWA behavior should be tested with a local static server or on GitHub Pages.
-
-Optional local server:
+Opening `index.html` is enough for a basic view. PWA and offline behavior require `localhost` or HTTPS:
 
 ```bash
-python -m http.server 8000
+node tests/static-server.js 8765
 ```
 
-Then open:
+Then open `http://127.0.0.1:8765/`.
 
-```text
-http://localhost:8000/
+## Verification
+
+Run syntax and generator/storage rules without installing dependencies:
+
+```bash
+node --check js/app.js
+node tests/core.test.js
 ```
 
-## Upload To GitHub
+`tests/core.test.js` exercises every group, operation set, difficulty, and range, then checks storage comparison, one-time retry rewards, and competition tie-breaking.
 
-1. Create a new repository named `MultiplicationRocket`.
-2. Upload all project files and folders from this directory.
-3. Commit the files to the default branch, usually `main`.
+See `docs/TEST_PLAN.md` for responsive, browser, localStorage, competition, and offline checks.
 
-## Enable GitHub Pages
+## GitHub Pages and Offline Use
 
-1. Open the repository on GitHub.
-2. Go to `Settings` > `Pages`.
-3. Under `Build and deployment`, choose `Deploy from a branch`.
-4. Select branch `main` and folder `/root`.
-5. Save.
-
-After GitHub finishes publishing, the app should work at:
-
-```text
-https://username.github.io/MultiplicationRocket/
-```
-
-## Open On iPad
-
-1. Open Safari on the iPad.
-2. Visit the GitHub Pages URL.
-3. Play one mission while online so Safari can cache the app.
-
-## Add To Home Screen On iPad
-
-1. Open the game in Safari.
-2. Tap the Share button.
-3. Tap `Add to Home Screen`.
-4. Confirm the name `Rocket Math`.
-5. Launch it from the Home Screen icon.
-
-## Test Offline Mode
-
-1. Open the GitHub Pages URL while online.
-2. Wait for the first page load to finish.
-3. Play or start a mission.
-4. Turn on Airplane Mode.
-5. Reopen the Home Screen app or refresh the page. The game should still load from cache.
-
-## Troubleshooting
-
-- If offline mode does not work, reload once while online and wait a few seconds.
-- If the Home Screen icon does not appear, confirm Safari is using the GitHub Pages `https://` URL.
-- If sound does not play, tap anywhere in the game first; mobile browsers require user interaction before audio.
-- If old files appear after an update, close the tab or Home Screen app and reopen it. The service worker deletes old named caches during activation.
-- If progress is missing, check whether Safari private browsing or storage restrictions are enabled.
+All paths are relative, so the repository can be deployed from a GitHub Pages subdirectory. Load the published game once while online to cache the app shell. On iPad, use Safari’s **Add to Home Screen** action to install Math Rocket.
