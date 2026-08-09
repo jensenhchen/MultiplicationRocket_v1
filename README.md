@@ -14,7 +14,7 @@ The browser app uses HTML, CSS, and vanilla JavaScript. A small dependency-free 
 - Ten questions per mission, followed by a compact result screen and missed-question retry
 - Child-first addition/subtraction generation with at least 60% make-ten or break-ten questions for CXY
 - Age-appropriate number, result, multiplication, and division limits
-- Three-day question-volume bars, accuracy curves, progress highlights, and per-group goals
+- Three-day question-volume bars, accuracy curves, progress highlights, and a 90-question goal (30 per day) for each group
 - Shared server-file progress with automatic on-device fallback
 - Large animated star and trophy celebrations
 - Supportive feedback after competition mistakes and congratulations for progress and wins
@@ -52,6 +52,7 @@ Easy uses 2 numbers, Medium uses 3, and Hard uses 4. CXY is intentionally gentle
 - Reach a five-answer correct streak: +1
 - Harder settings: a capped difficulty bonus
 - Correct a missed question during retry: +1
+- Complete more than 30 questions in one day: +1 extra star for each additional block of up to 10 questions
 - Competition winner: +2; draw: +1 per player
 
 Speed is measured per correct answer and shown only after the mission. It never rewards rushing at the cost of accuracy.

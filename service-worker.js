@@ -1,4 +1,4 @@
-const CACHE_NAME = "math-rocket-v3.3.0";
+const CACHE_NAME = "math-rocket-v3.4.0";
 const BASE_URL = self.registration.scope;
 
 const REQUIRED_ASSETS = [

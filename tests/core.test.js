@@ -147,6 +147,42 @@ recorded = storage.recordGameResult(progress, { ...result, sessionId: "practice-
 assert.equal(recorded.previous.sessionId, "practice-one");
 assert.equal(recorded.progress.totalStars, 160);
 
+let dailyProgress = storage.createDefaultProgress();
+for (let mission = 1; mission <= 3; mission += 1) {
+  const dailyRecorded = storage.recordGameResult(dailyProgress, {
+    ...result,
+    sessionId: `daily-${mission}`,
+    baseStars: 0,
+    playedAt: "2026-08-09"
+  });
+  assert.equal(dailyRecorded.dailyGoalBonus, 0, "the first 30 questions should not earn an extra star");
+  dailyProgress = dailyRecorded.progress;
+}
+let dailyRecorded = storage.recordGameResult(dailyProgress, {
+  ...result,
+  sessionId: "daily-4",
+  baseStars: 0,
+  playedAt: "2026-08-09"
+});
+assert.equal(dailyRecorded.dailyGoalBonus, 1, "questions 31-40 should earn one extra star");
+assert.equal(dailyRecorded.progress.totalStars, 1);
+dailyRecorded = storage.recordGameResult(dailyRecorded.progress, {
+  ...result,
+  sessionId: "daily-5",
+  baseStars: 0,
+  playedAt: "2026-08-09"
+});
+assert.equal(dailyRecorded.dailyGoalBonus, 1, "questions 41-50 should earn another extra star");
+assert.equal(dailyRecorded.progress.totalStars, 2);
+const challengerDaily = storage.recordGameResult(dailyRecorded.progress, {
+  ...result,
+  sessionId: "challenger-daily-1",
+  groupName: "challenger",
+  baseStars: 0,
+  playedAt: "2026-08-09"
+});
+assert.equal(challengerDaily.dailyGoalBonus, 0, "each group should have an independent daily goal");
+
 let retry = storage.recordRetryBonus(recorded.progress, {
   retryId: "practice-two-q1",
   groupName: "cxy",

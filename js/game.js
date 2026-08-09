@@ -238,6 +238,7 @@
     const recorded = RocketMath.storage.recordGameResult(state.progress, result);
     state.progress = recorded.progress;
     result.previous = recorded.previous;
+    result.dailyGoalBonus = recorded.dailyGoalBonus;
     state.lastResult = result;
     RocketMath.animation.setRocketState(RocketMath.ui.elements.rocket, "complete");
     RocketMath.audio.play(state.correctCount === RULES.totalQuestions ? "applause" : "complete");

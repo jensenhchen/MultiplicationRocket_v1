@@ -166,16 +166,21 @@
     const progress = normalizeProgress(currentProgress);
     const key = missionKey(result);
     const previous = progress.lastResults[key] || null;
-    const summary = summarizeResult(result);
     const groupName = normalizeGroupName(result.groupName);
     const historyName = result.mode === "competition" ? "competitionTurnHistory" : "practiceHistory";
     const baseStars = Number(result.baseStars) || 0;
+    const dailyGoalBonus = calculateDailyGoalBonus(progress, {
+      groupName,
+      playedAt: result.playedAt,
+      totalQuestions: result.totalQuestions
+    });
+    const summary = summarizeResult({ ...result, dailyGoalBonus });
 
     progress[historyName] = [summary, ...progress[historyName]].slice(0, HISTORY_LIMIT);
     progress.lastResults[key] = summary;
-    progress.totalStars += baseStars;
-    progress.groupStars[groupName] += baseStars;
-    progress.bestScore = Math.max(progress.bestScore, baseStars);
+    progress.totalStars += baseStars + dailyGoalBonus;
+    progress.groupStars[groupName] += baseStars + dailyGoalBonus;
+    progress.bestScore = Math.max(progress.bestScore, baseStars + dailyGoalBonus);
     progress.lastPlayedDate = result.playedAt || "";
     progress.gamesPlayed += 1;
     progress.wrongQuestions = [
@@ -185,7 +190,25 @@
 
     updateGroupStats(progress, result);
     saveProgress(progress);
-    return { progress, previous };
+    return { progress, previous, dailyGoalBonus };
+  }
+
+  function calculateDailyGoalBonus(progress, result) {
+    const groupName = normalizeGroupName(result.groupName);
+    const playedAt = result.playedAt || "";
+    const questions = Math.max(0, Number(result.totalQuestions) || 0);
+    if (!playedAt || !questions) return 0;
+    const history = [...progress.practiceHistory, ...progress.competitionTurnHistory];
+    const questionsBefore = history
+      .filter((item) => item.groupName === groupName && item.playedAt === playedAt)
+      .reduce((sum, item) => sum + Math.max(0, Number(item.totalQuestions) || 0), 0);
+    const bonusBefore = extraQuestionStars(questionsBefore);
+    const bonusAfter = extraQuestionStars(questionsBefore + questions);
+    return Math.max(0, bonusAfter - bonusBefore);
+  }
+
+  function extraQuestionStars(questionCount) {
+    return Math.ceil(Math.max(0, Number(questionCount) - 30) / 10);
   }
 
   function recordRetryBonus(currentProgress, retry) {
@@ -279,6 +302,7 @@
       rewards: normalizeRewards(result.rewards),
       baseStars: Number(result.baseStars) || 0,
       retryStars: Number(result.retryStars) || 0,
+      dailyGoalBonus: Math.max(0, Number(result.dailyGoalBonus) || 0),
       playedAt: result.playedAt || ""
     };
   }

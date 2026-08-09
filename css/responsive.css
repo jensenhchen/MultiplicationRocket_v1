@@ -1420,3 +1420,88 @@ body.is-celebrating .result-celebration-icon {
     height: 27px;
   }
 }
+
+/* Progress-chart labels and centered competition launch layout */
+.chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 3px 0 -2px;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.question-legend {
+  color: #16865d;
+}
+
+.accuracy-legend {
+  color: #2478d8;
+}
+
+.bar-value {
+  fill: #16865d;
+}
+
+.accuracy-value {
+  fill: #2478d8;
+}
+
+.challenger-progress .accuracy-legend {
+  color: #7047de;
+}
+
+.challenger-progress .accuracy-value {
+  fill: #7047de;
+}
+
+.goal-copy {
+  flex-wrap: wrap;
+}
+
+.goal-copy em {
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #925800;
+  background: #fff0a8;
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.competition-actions {
+  grid-template-columns: minmax(240px, 420px);
+  justify-content: center;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.competition-actions .competition-card {
+  width: 100%;
+}
+
+.competition-actions .competition-tip {
+  display: block;
+  grid-column: 1;
+  width: 100%;
+  max-width: 420px;
+  margin: 0;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .chart-legend {
+    gap: 12px;
+    font-size: 0.7rem;
+  }
+
+  .competition-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .competition-actions .competition-tip {
+    grid-column: 1;
+  }
+}

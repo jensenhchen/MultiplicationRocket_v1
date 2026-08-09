@@ -191,6 +191,7 @@
     const title = document.createElement("h3");
     const summary = document.createElement("p");
     const highlight = document.createElement("p");
+    const legend = document.createElement("div");
     const chart = createProgressChart(groupName, days);
     const goal = document.createElement("div");
     const goalCopy = document.createElement("div");
@@ -200,6 +201,8 @@
     const totalCorrect = days.reduce((sum, day) => sum + day.correct, 0);
     const accuracy = totalQuestions ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
     const progressMessage = getProgressMessage(days);
+    const threeDayGoal = days.length * 30;
+    const extraStars = days.reduce((sum, day) => sum + Math.ceil(Math.max(0, day.questions - 30) / 10), 0);
 
     card.className = `progress-card ${groupName === "challenger" ? "challenger-progress" : "cxy-progress"}`;
     heading.className = "progress-card-heading";
@@ -210,14 +213,28 @@
     highlight.className = `progress-highlight ${progressMessage.positive ? "is-positive" : "is-steady"}`;
     highlight.textContent = progressMessage.text;
 
+    legend.className = "chart-legend";
+    const questionLegend = document.createElement("span");
+    const accuracyLegend = document.createElement("span");
+    questionLegend.className = "question-legend";
+    questionLegend.textContent = "■ Questions";
+    accuracyLegend.className = "accuracy-legend";
+    accuracyLegend.textContent = "● Accuracy";
+    legend.append(questionLegend, accuracyLegend);
+
     goal.className = "three-day-goal";
     goalCopy.className = "goal-copy";
-    goalCopy.innerHTML = `<strong>${Math.min(totalQuestions, 30)}/30</strong><span>3-day question goal</span>`;
+    goalCopy.innerHTML = `<strong>${totalQuestions}/${threeDayGoal}</strong><span>3-day goal · 30 per day</span>`;
+    if (extraStars > 0) {
+      const bonus = document.createElement("em");
+      bonus.textContent = `+${extraStars} extra ⭐`;
+      goalCopy.appendChild(bonus);
+    }
     goalTrack.className = "goal-track";
-    goalFill.style.width = `${Math.min(100, (totalQuestions / 30) * 100)}%`;
+    goalFill.style.width = `${Math.min(100, (totalQuestions / threeDayGoal) * 100)}%`;
     goalTrack.appendChild(goalFill);
     goal.append(goalCopy, goalTrack);
-    card.append(heading, highlight, chart, goal);
+    card.append(heading, highlight, legend, chart, goal);
     return card;
   }
 
@@ -256,7 +273,11 @@
         fill,
         class: "question-bar"
       }));
-      svg.appendChild(svgNode(namespace, "text", { x, y: chartBottom - barHeight - 5, class: "bar-value" }, `${day.questions}Q`));
+      svg.appendChild(svgNode(namespace, "text", {
+        x: x - 17,
+        y: Math.min(chartBottom + 11, chartBottom - barHeight - 5),
+        class: "bar-value"
+      }, `${day.questions}Q`));
       svg.appendChild(svgNode(namespace, "text", { x, y: 143, class: "chart-date" }, day.label));
     });
 
@@ -273,7 +294,11 @@
       const x = xPositions[index];
       const y = chartBottom - day.accuracy * 0.82;
       svg.appendChild(svgNode(namespace, "circle", { cx: x, cy: y, r: 6, fill: color, class: "accuracy-point" }));
-      svg.appendChild(svgNode(namespace, "text", { x, y: Math.max(12, y - 9), class: "accuracy-value" }, `${day.accuracy}%`));
+      svg.appendChild(svgNode(namespace, "text", {
+        x: x + 18,
+        y: Math.max(12, y - 12),
+        class: "accuracy-value"
+      }, `${day.accuracy}%`));
     });
     return svg;
   }
@@ -425,13 +450,13 @@
     elements.resultMessage.textContent = view.message || result.message;
     elements.resultCelebrationIcon.textContent = result.correctionRate === 100 ? "🌟" : "⭐";
     elements.resultCelebrationIcon.classList.remove("is-trophy");
-    elements.finalScore.textContent = result.baseStars + (result.retryStars || 0);
+    elements.finalScore.textContent = result.baseStars + (result.retryStars || 0) + (result.dailyGoalBonus || 0);
     elements.finalCorrect.textContent = `${result.correctCount}/${result.totalQuestions}`;
     elements.finalRate.textContent = `${result.correctionRate}%`;
     elements.finalAverage.textContent = Number(result.averageCorrectSeconds) || 0;
     elements.finalTime.textContent = result.elapsedSeconds;
     elements.comparisonMessage.textContent = buildComparisonText(previous, result);
-    renderRewardBreakdown(result.rewards, result.retryStars);
+    renderRewardBreakdown(result.rewards, result.retryStars, result.dailyGoalBonus);
     elements.competitionResult.classList.add("hidden");
     elements.competitionResult.classList.remove("winner-celebration");
     elements.competitionNextButton.classList.add("hidden");
@@ -460,7 +485,7 @@
     }
   }
 
-  function renderRewardBreakdown(rewards, retryStars) {
+  function renderRewardBreakdown(rewards, retryStars, dailyGoalBonus) {
     elements.rewardBreakdown.innerHTML = "";
     const source = rewards || {};
     const items = [
@@ -471,6 +496,7 @@
       ["Speed ↑", source.speedImprovement],
       ["5 streak", source.streak],
       ["Challenge", source.difficulty],
+      ["Extra questions", dailyGoalBonus],
       ["Review", retryStars]
     ];
     items.forEach(([label, value]) => {
@@ -500,6 +526,7 @@
     const combinedTotal = cxy.totalQuestions + challenger.totalQuestions;
     const combinedStars = cxy.baseStars + challenger.baseStars
       + (cxy.retryStars || 0) + (challenger.retryStars || 0)
+      + (cxy.dailyGoalBonus || 0) + (challenger.dailyGoalBonus || 0)
       + comparison.bonuses.cxy + comparison.bonuses.challenger;
     const averageValues = [cxy.averageCorrectSeconds, challenger.averageCorrectSeconds].filter((value) => value > 0);
     const combinedAverage = averageValues.length
@@ -521,7 +548,8 @@
       correct: cxy.rewards.correct + challenger.rewards.correct,
       accuracy: cxy.rewards.accuracy + challenger.rewards.accuracy,
       difficulty: cxy.rewards.difficulty + challenger.rewards.difficulty
-    }, (cxy.retryStars || 0) + (challenger.retryStars || 0));
+    }, (cxy.retryStars || 0) + (challenger.retryStars || 0),
+    (cxy.dailyGoalBonus || 0) + (challenger.dailyGoalBonus || 0));
     elements.competitionNextButton.classList.add("hidden");
     elements.competitionResult.classList.remove("hidden");
     elements.competitionResult.classList.add("winner-celebration");
@@ -556,7 +584,7 @@
     card.className = `competition-score-card ${isWinner ? "competition-winner-card" : "competition-encourage-card"}`;
     title.textContent = label;
     score.className = "big-score";
-    score.textContent = `${result.baseStars}⭐ · ${result.correctionRate}% · ${result.averageCorrectSeconds || 0}s avg`;
+    score.textContent = `${result.baseStars + (result.dailyGoalBonus || 0)}⭐ · ${result.correctionRate}% · ${result.averageCorrectSeconds || 0}s avg`;
     details.textContent = `${shortConfig(result)} · ×${Number(result.difficultyMultiplier).toFixed(2)} · winner +${winnerBonus}`;
     encouragement.className = "competition-card-message";
     encouragement.textContent = isWinner
