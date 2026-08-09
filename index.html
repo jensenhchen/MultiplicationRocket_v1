@@ -230,22 +230,33 @@
     </section>
 
     <section id="game-screen" class="panel game-panel hidden" aria-labelledby="question-text">
-      <div class="play-hud" aria-label="Mission progress">
-        <div class="pilot-chip">
-          <span>Pilot</span>
-          <strong id="mission-label">CXY</strong>
-        </div>
-        <div class="progress-cluster">
-          <div class="progress-copy">
-            <strong><span id="question-number">1</span>/<span id="question-total">10</span></strong>
-            <span id="mission-config"></span>
+      <div class="play-header">
+        <nav class="play-navigation" aria-label="Practice navigation">
+          <button id="go-back-button" class="play-nav-button" type="button" aria-label="Go back to mission choices">
+            <span aria-hidden="true">←</span> Back
+          </button>
+          <button id="go-home-button" class="play-nav-button" type="button" aria-label="Go to Math Rocket homepage">
+            <span aria-hidden="true">⌂</span> Home
+          </button>
+        </nav>
+
+        <div class="play-hud" aria-label="Mission progress">
+          <div class="pilot-chip">
+            <span>Pilot</span>
+            <strong id="mission-label">CXY</strong>
           </div>
-          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="10" aria-valuenow="1">
-            <span id="question-progress"></span>
+          <div class="progress-cluster">
+            <div class="progress-copy">
+              <strong><span id="question-number">1</span>/<span id="question-total">10</span></strong>
+              <span id="mission-config"></span>
+            </div>
+            <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="10" aria-valuenow="1">
+              <span id="question-progress"></span>
+            </div>
           </div>
+          <div class="star-score"><span>⭐</span><strong id="score">0</strong></div>
+          <div class="streak-score"><span>Streak</span><strong id="streak">0</strong></div>
         </div>
-        <div class="star-score"><span>⭐</span><strong id="score">0</strong></div>
-        <div class="streak-score"><span>Streak</span><strong id="streak">0</strong></div>
       </div>
 
       <div id="competition-hud" class="competition-hud hidden" aria-live="polite">
@@ -342,6 +353,7 @@
       <div class="result-actions">
         <button id="competition-next-button" class="hidden" type="button">Start Challenger turn</button>
         <button id="play-again-button" type="button">Back to missions</button>
+        <button id="result-home-button" class="result-home-button" type="button">⌂ Homepage</button>
       </div>
     </section>
   </main>

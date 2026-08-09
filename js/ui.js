@@ -40,6 +40,8 @@
     questionText: document.querySelector("#question-text"),
     answerButtons: document.querySelector("#answer-buttons"),
     hintButton: document.querySelector("#hint-button"),
+    goBackButton: document.querySelector("#go-back-button"),
+    goHomeButton: document.querySelector("#go-home-button"),
     hintText: document.querySelector("#hint-text"),
     message: document.querySelector("#message"),
     resultTitle: document.querySelector("#result-title"),
@@ -60,7 +62,8 @@
     wrongReview: document.querySelector("#wrong-review"),
     retryActions: document.querySelector("#retry-actions"),
     competitionNextButton: document.querySelector("#competition-next-button"),
-    playAgainButton: document.querySelector("#play-again-button")
+    playAgainButton: document.querySelector("#play-again-button"),
+    resultHomeButton: document.querySelector("#result-home-button")
   };
 
   function showScreen(screenName) {
@@ -70,6 +73,18 @@
     document.body.classList.toggle("is-playing", screenName === "game");
     document.body.classList.toggle("is-result", screenName === "result");
     document.body.classList.remove("is-celebrating");
+  }
+
+  function focusStartArea(areaName, groupName) {
+    const isHome = areaName === "home";
+    const target = isHome
+      ? elements.startScreen
+      : document.querySelector(areaName === "competition" ? "#competition-setup" : "#practice-setup");
+    if (!isHome) showGroupTab(groupName);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: isHome ? 0 : target.offsetTop - 12, behavior: "smooth" });
+      if (!isHome) target.querySelector("h2")?.focus({ preventScroll: true });
+    });
   }
 
   function showSetupMode(modeName) {
@@ -633,6 +648,7 @@
   RocketMath.ui = {
     elements,
     showScreen,
+    focusStartArea,
     showSetupMode,
     showGroupTab,
     applyConfigs,

@@ -73,6 +73,16 @@
       RocketMath.game.showHint();
     });
 
+    ui.elements.goBackButton.addEventListener("click", () => {
+      RocketMath.audio.play("click");
+      RocketMath.game.leaveMission("back");
+    });
+
+    ui.elements.goHomeButton.addEventListener("click", () => {
+      RocketMath.audio.play("click");
+      RocketMath.game.leaveMission("home");
+    });
+
     ui.elements.resultScreen.addEventListener("click", (event) => {
       const retryButton = event.target.closest("[data-retry-group]");
       if (!retryButton) return;
@@ -83,6 +93,12 @@
     ui.elements.playAgainButton.addEventListener("click", () => {
       RocketMath.audio.play("click");
       RocketMath.game.showStart();
+    });
+
+    ui.elements.resultHomeButton.addEventListener("click", () => {
+      RocketMath.audio.play("click");
+      RocketMath.game.showStart();
+      RocketMath.ui.focusStartArea("home");
     });
 
     ui.elements.competitionNextButton.addEventListener("click", () => {

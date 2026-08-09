@@ -1505,3 +1505,394 @@ body.is-celebrating .result-celebration-icon {
     grid-column: 1;
   }
 }
+
+/* Full-screen mission layout and navigation */
+body.is-playing .game-shell {
+  width: 100%;
+  max-width: 1720px;
+}
+
+.game-panel {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: clamp(9px, 1.3vh, 15px);
+  padding: clamp(13px, 1.5vw, 24px);
+  background:
+    linear-gradient(135deg, rgba(239, 248, 255, 0.82), transparent 34%),
+    #ffffff;
+}
+
+.play-header {
+  display: grid;
+  grid-row: 1;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: clamp(8px, 1vw, 14px);
+  min-width: 0;
+}
+
+.game-panel > .competition-hud {
+  grid-row: 2;
+}
+
+.play-navigation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(82px, auto));
+  align-items: stretch;
+  gap: 7px;
+}
+
+.play-nav-button,
+.result-home-button {
+  min-height: 52px;
+  padding: 8px 13px;
+  border: 2px solid #b9dcf7;
+  color: #285274;
+  background: #f4fbff;
+  box-shadow: 0 4px 0 #b9dcf7;
+  font-size: clamp(0.82rem, 1.2vw, 1rem);
+}
+
+.play-nav-button span {
+  margin-right: 3px;
+  font-size: 1.15em;
+}
+
+.play-hud {
+  grid-template-columns: minmax(150px, 1.1fr) minmax(250px, 2.3fr) minmax(100px, 0.75fr) minmax(90px, 0.65fr);
+  align-items: stretch;
+}
+
+.pilot-chip,
+.progress-cluster,
+.star-score,
+.streak-score {
+  display: grid;
+  align-content: center;
+  min-height: 58px;
+  padding: 9px 13px;
+  border: 1px solid #dcecf8;
+  border-radius: 15px;
+  box-shadow: 0 5px 12px rgba(36, 120, 216, 0.08);
+}
+
+.star-score {
+  display: flex;
+}
+
+.play-stage {
+  grid-row: 3;
+  grid-template-columns: minmax(210px, 0.72fr) minmax(0, 2.28fr);
+  gap: clamp(14px, 1.7vw, 24px);
+  min-height: 0;
+}
+
+.rocket-area {
+  min-height: 260px;
+  border: 2px solid rgba(77, 163, 255, 0.3);
+  border-radius: 22px;
+  box-shadow: inset 0 0 32px rgba(128, 215, 255, 0.2), 0 9px 20px rgba(22, 58, 115, 0.14);
+}
+
+.question-zone {
+  grid-template-rows: minmax(100px, 0.65fr) minmax(250px, 2.35fr);
+  gap: clamp(12px, 1.5vh, 18px);
+  padding: clamp(4px, 0.8vw, 12px);
+}
+
+.question {
+  border: 2px solid #e2eef9;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff, #f7fbff);
+  box-shadow: 0 7px 18px rgba(22, 58, 115, 0.08);
+  font-size: clamp(3rem, 6.7vw, 6.2rem);
+}
+
+.answer-grid {
+  grid-template-rows: repeat(2, minmax(105px, 1fr));
+  gap: clamp(10px, 1.4vw, 18px);
+}
+
+.answer-button {
+  min-height: 105px;
+  border: 2px solid rgba(255, 255, 255, 0.62);
+  border-radius: 19px;
+  box-shadow: 0 7px 0 var(--blue-dark), 0 11px 18px rgba(36, 120, 216, 0.16);
+  font-size: clamp(2.4rem, 5vw, 5rem);
+}
+
+.answer-button:active {
+  box-shadow: 0 3px 0 var(--blue-dark);
+}
+
+.answer-shortcut {
+  top: 10px;
+  left: 11px;
+  width: 29px;
+  height: 29px;
+  font-size: 0.82rem;
+}
+
+.support-row {
+  grid-row: 4;
+  min-height: 62px;
+  gap: 13px;
+}
+
+.support-row .secondary-button {
+  min-width: 112px;
+  min-height: 52px;
+  font-size: 1rem;
+}
+
+.feedback-zone {
+  min-height: 54px;
+  padding: 8px 14px;
+  border: 2px solid #e7f0f8;
+  border-radius: 15px;
+}
+
+.hint,
+.message {
+  font-size: clamp(0.86rem, 1.35vw, 1.08rem);
+}
+
+.result-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+}
+
+.result-actions #competition-next-button,
+.result-actions #play-again-button,
+.result-actions .result-home-button {
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .play-header {
+    grid-template-columns: 1fr;
+  }
+
+  .play-navigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .play-nav-button {
+    min-height: 42px;
+  }
+
+  .play-hud {
+    grid-template-columns: minmax(105px, 1fr) minmax(170px, 1.8fr) minmax(76px, 0.7fr) minmax(70px, 0.6fr);
+  }
+
+  .pilot-chip,
+  .progress-cluster,
+  .star-score,
+  .streak-score {
+    min-height: 50px;
+  }
+}
+
+@media (max-width: 720px) and (orientation: portrait) {
+  body.is-playing .game-shell {
+    padding:
+      max(6px, env(safe-area-inset-top))
+      max(7px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(7px, env(safe-area-inset-left));
+  }
+
+  .game-panel {
+    gap: 7px;
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  .play-header {
+    gap: 6px;
+  }
+
+  .play-navigation {
+    gap: 6px;
+  }
+
+  .play-nav-button {
+    min-height: 38px;
+    padding: 5px 8px;
+    border-radius: 10px;
+    box-shadow: 0 3px 0 #b9dcf7;
+    font-size: 0.74rem;
+  }
+
+  .play-hud {
+    grid-template-columns: minmax(82px, 1fr) minmax(125px, 1.55fr) minmax(62px, 0.65fr);
+    gap: 5px;
+  }
+
+  .pilot-chip,
+  .progress-cluster,
+  .star-score,
+  .streak-score {
+    min-height: 45px;
+    padding: 5px 7px;
+    border-radius: 11px;
+  }
+
+  .streak-score {
+    display: none;
+  }
+
+  .play-stage {
+    grid-template-columns: 1fr;
+    grid-template-rows: clamp(72px, 12vh, 105px) minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .rocket-area {
+    min-height: 72px;
+    border-radius: 14px;
+  }
+
+  #rocket {
+    bottom: -50%;
+    width: clamp(60px, 18vw, 82px);
+  }
+
+  .question-zone {
+    grid-template-rows: minmax(62px, 0.58fr) minmax(0, 2.42fr);
+    gap: 8px;
+    padding: 0;
+  }
+
+  .question {
+    border-radius: 14px;
+    font-size: clamp(2rem, 11vw, 3.5rem);
+  }
+
+  .answer-grid {
+    grid-template-rows: repeat(2, minmax(68px, 1fr));
+    gap: 8px;
+  }
+
+  .answer-button {
+    min-height: 68px;
+    border-radius: 14px;
+    box-shadow: 0 5px 0 var(--blue-dark);
+    font-size: clamp(1.8rem, 10vw, 3rem);
+  }
+
+  .answer-shortcut {
+    top: 6px;
+    left: 7px;
+    width: 21px;
+    height: 21px;
+    font-size: 0.64rem;
+  }
+
+  .support-row {
+    min-height: 46px;
+    gap: 7px;
+  }
+
+  .support-row .secondary-button {
+    min-width: 76px;
+    min-height: 40px;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  .feedback-zone {
+    min-height: 42px;
+    padding: 5px 8px;
+  }
+
+  .hint,
+  .message {
+    font-size: 0.68rem;
+  }
+
+  .result-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .game-panel {
+    gap: 6px;
+    padding: 7px;
+  }
+
+  .play-header {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .play-navigation {
+    grid-template-columns: repeat(2, minmax(68px, auto));
+    gap: 5px;
+  }
+
+  .play-nav-button {
+    min-height: 38px;
+    padding: 4px 7px;
+    font-size: 0.7rem;
+  }
+
+  .play-hud {
+    grid-template-columns: minmax(90px, 1fr) minmax(160px, 1.7fr) 68px;
+    gap: 5px;
+  }
+
+  .pilot-chip,
+  .progress-cluster,
+  .star-score,
+  .streak-score {
+    min-height: 40px;
+    padding: 4px 6px;
+  }
+
+  .streak-score {
+    display: none;
+  }
+
+  .play-stage {
+    grid-template-columns: minmax(110px, 0.42fr) minmax(0, 2.58fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .rocket-area {
+    min-height: 0;
+    border-radius: 13px;
+  }
+
+  .question-zone {
+    grid-template-rows: minmax(52px, 0.55fr) minmax(0, 2.45fr);
+    gap: 7px;
+    padding: 0;
+  }
+
+  .question {
+    border-radius: 12px;
+    font-size: clamp(2rem, 7vh, 3.2rem);
+  }
+
+  .answer-grid {
+    grid-template-rows: repeat(2, minmax(54px, 1fr));
+    gap: 7px;
+  }
+
+  .answer-button {
+    min-height: 54px;
+    border-radius: 12px;
+    font-size: clamp(1.7rem, 6vh, 2.8rem);
+  }
+
+  .support-row {
+    min-height: 40px;
+  }
+
+  .support-row .secondary-button,
+  .feedback-zone {
+    min-height: 36px;
+  }
+}

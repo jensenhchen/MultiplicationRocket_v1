@@ -484,10 +484,18 @@
     state.competition = null;
     state.retry = null;
     state.currentQuestion = null;
+    state.acceptingAnswers = false;
     RocketMath.ui.updateTimer(0);
     RocketMath.ui.renderProgress(state.progress);
     RocketMath.ui.updateCompetitionSummaries();
     RocketMath.ui.showScreen("start");
+  }
+
+  function leaveMission(destination) {
+    const previousMode = state.mode;
+    const previousGroup = state.config && state.config.groupName;
+    showStart();
+    RocketMath.ui.focusStartArea(destination === "home" ? "home" : previousMode, previousGroup);
   }
 
   function startTimer() {
@@ -567,6 +575,7 @@
     saveConfig,
     resetProgress,
     showStart,
+    leaveMission,
     compareCompetition,
     computeRewards
   };
