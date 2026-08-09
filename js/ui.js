@@ -178,11 +178,16 @@
 
   function renderProgressDashboard(progress) {
     if (!elements.progressCards) return;
-    const dates = getRecentDateKeys(3);
+    const dates = getRecentDateKeys(7);
+    const todayKey = dates[dates.length - 1].key;
     const allResults = [
       ...(Array.isArray(progress.practiceHistory) ? progress.practiceHistory : []),
       ...(Array.isArray(progress.competitionTurnHistory) ? progress.competitionTurnHistory : [])
     ];
+    const groupTotals = progress.groupStars || { cxy: 0, challenger: 0 };
+    const leadingGroup = Number(groupTotals.cxy) === Number(groupTotals.challenger)
+      ? ""
+      : (Number(groupTotals.cxy) > Number(groupTotals.challenger) ? "cxy" : "challenger");
     elements.progressCards.innerHTML = "";
     ["cxy", "challenger"].forEach((groupName) => {
       const days = dates.map((date) => {
@@ -196,15 +201,45 @@
           accuracy: questions ? Math.round((correct / questions) * 100) : 0
         };
       });
-      elements.progressCards.appendChild(createProgressCard(groupName, days));
+      elements.progressCards.appendChild(createProgressCard(
+        groupName,
+        days,
+        getStarSummary(progress, groupName, todayKey),
+        leadingGroup === groupName
+      ));
     });
   }
 
-  function createProgressCard(groupName, days) {
+  function getStarSummary(progress, groupName, todayKey) {
+    const retries = Array.isArray(progress.retryHistory) ? progress.retryHistory : [];
+    const retryStars = (mode) => retries
+      .filter((item) => item.groupName === groupName
+        && item.completedAt === todayKey
+        && (item.mode || "practice") === mode)
+      .reduce((sum, item) => sum + (Number(item.stars) || 0), 0);
+    const historyStars = (history) => history
+      .filter((item) => item.groupName === groupName && item.playedAt === todayKey)
+      .reduce((sum, item) => sum
+        + (Number(item.baseStars) || 0)
+        + (Number(item.speedStars) || 0)
+        + (Number(item.dailyGoalBonus) || 0), 0);
+    return {
+      total: Math.max(0, Number(progress.groupStars && progress.groupStars[groupName]) || 0),
+      practiceToday: historyStars(Array.isArray(progress.practiceHistory) ? progress.practiceHistory : [])
+        + retryStars("practice"),
+      competitionToday: historyStars(Array.isArray(progress.competitionTurnHistory) ? progress.competitionTurnHistory : [])
+        + retryStars("competition")
+    };
+  }
+
+  function createProgressCard(groupName, days, starSummary, isLeader) {
     const card = document.createElement("article");
     const heading = document.createElement("div");
     const title = document.createElement("h3");
     const summary = document.createElement("p");
+    const starOverview = document.createElement("div");
+    const totalStars = document.createElement("div");
+    const todayStars = document.createElement("div");
     const highlight = document.createElement("p");
     const legend = document.createElement("div");
     const chart = createProgressChart(groupName, days);
@@ -213,17 +248,31 @@
     const goalTrack = document.createElement("div");
     const goalFill = document.createElement("span");
     const totalQuestions = days.reduce((sum, day) => sum + day.questions, 0);
-    const totalCorrect = days.reduce((sum, day) => sum + day.correct, 0);
-    const accuracy = totalQuestions ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+    const today = days[days.length - 1];
     const progressMessage = getProgressMessage(days);
-    const threeDayGoal = days.length * 30;
+    const sevenDayGoal = days.length * 30;
     const extraStars = days.reduce((sum, day) => sum + Math.ceil(Math.max(0, day.questions - 30) / 10), 0);
 
     card.className = `progress-card ${groupName === "challenger" ? "challenger-progress" : "cxy-progress"}`;
+    if (isLeader) card.classList.add("star-leader");
     heading.className = "progress-card-heading";
     title.textContent = RocketMath.questions.getGroup(groupName).name;
-    summary.textContent = `${totalQuestions} questions · ${accuracy}% accuracy`;
+    summary.textContent = `Today ${today.correct}/${today.questions} correct`;
     heading.append(title, summary);
+
+    starOverview.className = "star-overview";
+    totalStars.className = "total-stars-summary";
+    totalStars.innerHTML = `<span>Total stars</span><strong>${starSummary.total}⭐</strong>`;
+    if (isLeader) {
+      const trophy = document.createElement("b");
+      trophy.className = "leader-trophy";
+      trophy.setAttribute("aria-label", "Star leader");
+      trophy.textContent = "🏆";
+      totalStars.appendChild(trophy);
+    }
+    todayStars.className = "today-stars-summary";
+    todayStars.innerHTML = `<span>Practice today <strong>${starSummary.practiceToday}⭐</strong></span><span>Competition today <strong>${starSummary.competitionToday}⭐</strong></span>`;
+    starOverview.append(totalStars, todayStars);
 
     highlight.className = `progress-highlight ${progressMessage.positive ? "is-positive" : "is-steady"}`;
     highlight.textContent = progressMessage.text;
@@ -234,22 +283,23 @@
     questionLegend.className = "question-legend";
     questionLegend.textContent = "■ Questions";
     accuracyLegend.className = "accuracy-legend";
-    accuracyLegend.textContent = "● Accuracy";
+    accuracyLegend.textContent = "● Correct / total";
     legend.append(questionLegend, accuracyLegend);
 
     goal.className = "three-day-goal";
+    goal.classList.add("seven-day-goal");
     goalCopy.className = "goal-copy";
-    goalCopy.innerHTML = `<strong>${totalQuestions}/${threeDayGoal}</strong><span>3-day goal · 30 per day</span>`;
+    goalCopy.innerHTML = `<strong>${totalQuestions}/${sevenDayGoal}</strong><span>7-day goal · 30 per day</span>`;
     if (extraStars > 0) {
       const bonus = document.createElement("em");
       bonus.textContent = `+${extraStars} extra ⭐`;
       goalCopy.appendChild(bonus);
     }
     goalTrack.className = "goal-track";
-    goalFill.style.width = `${Math.min(100, (totalQuestions / threeDayGoal) * 100)}%`;
+    goalFill.style.width = `${Math.min(100, (totalQuestions / sevenDayGoal) * 100)}%`;
     goalTrack.appendChild(goalFill);
     goal.append(goalCopy, goalTrack);
-    card.append(heading, highlight, legend, chart, goal);
+    card.append(heading, starOverview, highlight, legend, chart, goal);
     return card;
   }
 
@@ -258,42 +308,40 @@
     const svg = document.createElementNS(namespace, "svg");
     const color = groupName === "challenger" ? "#7c5cff" : "#2478d8";
     const fill = groupName === "challenger" ? "#d9ccff" : "#bfe5ff";
-    const xPositions = [62, 160, 258];
-    const chartBottom = 116;
+    const xPositions = days.map((day, index) => 52 + index * 68);
+    const chartBottom = 138;
     const maximumQuestions = Math.max(10, ...days.map((day) => day.questions));
     const points = [];
 
     svg.classList.add("progress-chart");
-    svg.setAttribute("viewBox", "0 0 320 150");
+    svg.setAttribute("viewBox", "0 0 510 170");
     svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", `${RocketMath.questions.getGroup(groupName).name} questions and accuracy for the last three days`);
+    svg.setAttribute("aria-label", `${RocketMath.questions.getGroup(groupName).name} questions and correct answers for the last seven days`);
 
-    [25, 50, 75, 100].forEach((percentage) => {
-      const y = chartBottom - percentage * 0.82;
-      svg.appendChild(svgNode(namespace, "line", { x1: 34, y1: y, x2: 294, y2: y, class: "chart-grid" }));
-      svg.appendChild(svgNode(namespace, "text", { x: 4, y: y + 4, class: "chart-axis" }, `${percentage}%`));
+    [48, 78, 108, chartBottom].forEach((y) => {
+      svg.appendChild(svgNode(namespace, "line", { x1: 24, y1: y, x2: 486, y2: y, class: "chart-grid" }));
     });
 
     days.forEach((day, index) => {
       const x = xPositions[index];
-      const barHeight = (day.questions / maximumQuestions) * 62;
-      const accuracyY = chartBottom - day.accuracy * 0.82;
+      const barHeight = (day.questions / maximumQuestions) * 72;
+      const accuracyY = chartBottom - (day.questions ? (day.correct / day.questions) : 0) * 82;
       points.push(`${x},${accuracyY}`);
       svg.appendChild(svgNode(namespace, "rect", {
-        x: x - 18,
+        x: x - 15,
         y: chartBottom - barHeight,
-        width: 36,
+        width: 30,
         height: Math.max(2, barHeight),
         rx: 8,
         fill,
         class: "question-bar"
       }));
       svg.appendChild(svgNode(namespace, "text", {
-        x: x - 17,
-        y: Math.min(chartBottom + 11, chartBottom - barHeight - 5),
+        x,
+        y: chartBottom - barHeight - 5,
         class: "bar-value"
       }, `${day.questions}Q`));
-      svg.appendChild(svgNode(namespace, "text", { x, y: 143, class: "chart-date" }, day.label));
+      svg.appendChild(svgNode(namespace, "text", { x, y: 163, class: "chart-date" }, day.label));
     });
 
     svg.appendChild(svgNode(namespace, "polyline", {
@@ -307,13 +355,13 @@
     }));
     days.forEach((day, index) => {
       const x = xPositions[index];
-      const y = chartBottom - day.accuracy * 0.82;
+      const y = chartBottom - (day.questions ? (day.correct / day.questions) : 0) * 82;
       svg.appendChild(svgNode(namespace, "circle", { cx: x, cy: y, r: 6, fill: color, class: "accuracy-point" }));
       svg.appendChild(svgNode(namespace, "text", {
-        x: x + 18,
-        y: Math.max(12, y - 12),
+        x,
+        y: 17,
         class: "accuracy-value"
-      }, `${day.accuracy}%`));
+      }, `${day.correct}/${day.questions}`));
     });
     return svg;
   }
@@ -331,7 +379,9 @@
     if (activeDays.length === 1) return { positive: true, text: `Great start — ${activeDays[0].questions} questions completed!` };
     const previous = activeDays[activeDays.length - 2];
     const latest = activeDays[activeDays.length - 1];
-    const accuracyChange = latest.accuracy - previous.accuracy;
+    const correctChange = latest.correct - previous.correct;
+    if (correctChange > 0) return { positive: true, text: `Fantastic progress — ${correctChange} more correct answers!` };
+    const accuracyChange = 0;
     if (accuracyChange > 0) return { positive: true, text: `Fantastic progress — accuracy improved by ${accuracyChange} points!` };
     if (latest.questions > previous.questions) return { positive: true, text: `Strong effort — ${latest.questions - previous.questions} more questions completed!` };
     return { positive: false, text: "Every mission builds confidence — keep your rocket moving!" };
@@ -505,12 +555,16 @@
     const source = rewards || {};
     const items = [
       ["Completed", source.completion],
+      ["Perfect", source.perfect],
       ["Correct", source.correct],
       ["Accuracy", source.accuracy],
+      ["Operations", source.operations],
+      ["Difficulty", source.difficulty],
+      ["Number range", source.range],
       ["Accuracy ↑", source.accuracyImprovement],
       ["Speed ↑", source.speedImprovement],
       ["5 streak", source.streak],
-      ["Challenge", source.difficulty],
+      ["Challenge", 0],
       ["Extra questions", dailyGoalBonus],
       ["Review", retryStars]
     ];
@@ -557,12 +611,13 @@
     elements.finalRate.textContent = `${Math.round((combinedCorrect / combinedTotal) * 100)}%`;
     elements.finalAverage.textContent = combinedAverage;
     elements.finalTime.textContent = cxy.elapsedSeconds + challenger.elapsedSeconds;
-    elements.comparisonMessage.textContent = "Mission stars decide the winner; accuracy and careful speed break a tie.";
+    elements.comparisonMessage.textContent = "A perfect score wins first. Otherwise, total mission stars decide; the faster pilot earns +2 stars.";
     renderRewardBreakdown({
       completion: cxy.rewards.completion + challenger.rewards.completion,
-      correct: cxy.rewards.correct + challenger.rewards.correct,
       accuracy: cxy.rewards.accuracy + challenger.rewards.accuracy,
-      difficulty: cxy.rewards.difficulty + challenger.rewards.difficulty
+      operations: cxy.rewards.operations + challenger.rewards.operations,
+      difficulty: cxy.rewards.difficulty + challenger.rewards.difficulty,
+      range: cxy.rewards.range + challenger.rewards.range
     }, (cxy.retryStars || 0) + (challenger.retryStars || 0),
     (cxy.dailyGoalBonus || 0) + (challenger.dailyGoalBonus || 0));
     elements.competitionNextButton.classList.add("hidden");
@@ -589,24 +644,58 @@
   }
 
   function createCompetitionCard(label, result, winnerBonus, winnerGroup) {
-    const card = document.createElement("div");
-    const title = document.createElement("h3");
-    const score = document.createElement("p");
-    const details = document.createElement("p");
-    const encouragement = document.createElement("p");
-    const groupName = label === "Challenger" ? "challenger" : "cxy";
-    const isWinner = winnerGroup === "draw" || winnerGroup === groupName;
-    card.className = `competition-score-card ${isWinner ? "competition-winner-card" : "competition-encourage-card"}`;
-    title.textContent = label;
-    score.className = "big-score";
-    score.textContent = `${result.baseStars + (result.dailyGoalBonus || 0)}⭐ · ${result.correctionRate}% · ${result.averageCorrectSeconds || 0}s avg`;
-    details.textContent = `${shortConfig(result)} · ×${Number(result.difficultyMultiplier).toFixed(2)} · winner +${winnerBonus}`;
-    encouragement.className = "competition-card-message";
-    encouragement.textContent = isWinner
-      ? "🏆 Congratulations — fantastic progress!"
-      : "🚀 Strong effort — your comeback starts with the next mission!";
-    card.append(title, score, details, encouragement);
-    return card;
+    {
+      const scoreCard = document.createElement("div");
+      const cardHeader = document.createElement("div");
+      const cardTitle = document.createElement("h3");
+      const cardTotal = document.createElement("strong");
+      const breakdown = document.createElement("dl");
+      const encouragementText = document.createElement("p");
+      const normalizedGroup = label === "Challenger" ? "challenger" : "cxy";
+      const isWinnerCard = winnerGroup === "draw" || winnerGroup === normalizedGroup;
+      const speedStars = Number(winnerBonus) || 0;
+      const reviewStars = Number(result.retryStars) || 0;
+      const dailyStars = Number(result.dailyGoalBonus) || 0;
+      const totalEarned = (Number(result.baseStars) || 0) + speedStars + reviewStars + dailyStars;
+      const rows = [
+        ["Completion basis", result.rewards.completion],
+        ["Operations", result.rewards.operations],
+        ["Difficulty", result.rewards.difficulty],
+        ["Number range", result.rewards.range],
+        [`Correct ${result.correctCount}/${result.totalQuestions}`, result.rewards.accuracy],
+        [`Speed · ${result.elapsedSeconds}s`, speedStars],
+        ["Corrected in review", reviewStars]
+      ];
+      if (dailyStars > 0) rows.push(["Extra daily questions", dailyStars]);
+
+      scoreCard.className = `competition-score-card competition-detail-card ${isWinnerCard ? "competition-winner-card" : "competition-encourage-card"}`;
+      cardHeader.className = "competition-card-heading";
+      cardTitle.textContent = label;
+      cardTotal.className = "competition-total-stars";
+      cardTotal.textContent = `${totalEarned}⭐`;
+      cardHeader.append(cardTitle, cardTotal);
+      if (isWinnerCard && winnerGroup !== "draw") {
+        const winnerTrophy = document.createElement("span");
+        winnerTrophy.className = "competition-big-trophy";
+        winnerTrophy.setAttribute("aria-label", "Winner");
+        winnerTrophy.textContent = "🏆";
+        cardHeader.appendChild(winnerTrophy);
+      }
+      breakdown.className = "competition-star-details";
+      rows.forEach(([rowLabel, value]) => {
+        const term = document.createElement("dt");
+        const detail = document.createElement("dd");
+        term.textContent = rowLabel;
+        detail.textContent = `+${Number(value) || 0}⭐`;
+        breakdown.append(term, detail);
+      });
+      encouragementText.className = "competition-card-message";
+      encouragementText.textContent = isWinnerCard
+        ? "🏆 Congratulations — a brilliant competition!"
+        : "🚀 Strong effort — review the tricky ones and come back stronger!";
+      scoreCard.append(cardHeader, breakdown, encouragementText);
+      return scoreCard;
+    }
   }
 
   function createRetryButton(groupName, count) {

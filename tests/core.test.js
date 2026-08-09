@@ -198,57 +198,132 @@ retry = storage.recordRetryBonus(retry.progress, {
 });
 assert.equal(retry.awarded, 0, "retry stars must only be awarded once");
 
-const rewardResult = {
+const practiceBasis = RocketMath.game.computeRewards({
+  mode: "practice",
+  groupName: "cxy",
+  operationSet: "add-sub",
+  difficulty: "easy",
+  rangeMax: 10,
+  correctCount: 10,
+  totalQuestions: 10
+});
+assert.deepEqual(JSON.parse(JSON.stringify(practiceBasis)), {
+  completion: 0,
+  perfect: 5,
+  accuracy: 0,
+  operations: 0,
+  difficulty: 0,
+  range: 0,
+  total: 5
+});
+const practiceMaximum = RocketMath.game.computeRewards({
+  mode: "practice",
+  groupName: "cxy",
+  operationSet: "all",
+  difficulty: "hard",
+  rangeMax: 20,
+  correctCount: 10,
+  totalQuestions: 10
+});
+assert.equal(practiceMaximum.total, 11, "perfect practice should add all three option levels to the 5-star basis");
+const imperfectPractice = RocketMath.game.computeRewards({
+  mode: "practice",
+  groupName: "cxy",
+  operationSet: "all",
+  difficulty: "hard",
+  rangeMax: 20,
   correctCount: 9,
-  correctionRate: 90,
-  averageCorrectSeconds: 5,
-  maxStreak: 5,
-  difficultyMultiplier: 1.3
-};
-const rewards = RocketMath.game.computeRewards(rewardResult, {
-  correctionRate: 80,
-  averageCorrectSeconds: 6
+  totalQuestions: 10
 });
-assert.deepEqual(JSON.parse(JSON.stringify(rewards)), {
-  completion: 2,
-  correct: 9,
-  accuracy: 2,
-  accuracyImprovement: 2,
-  speedImprovement: 1,
-  streak: 1,
-  difficulty: 3,
-  total: 20
+assert.equal(imperfectPractice.total, 0, "practice stars require a perfect first attempt");
+
+const competitionBasis = RocketMath.game.computeRewards({
+  mode: "competition",
+  groupName: "cxy",
+  operationSet: "add-sub",
+  difficulty: "easy",
+  rangeMax: 10,
+  correctCount: 10,
+  totalQuestions: 10
 });
-const accuracyFirst = RocketMath.game.computeRewards({
-  ...rewardResult,
+assert.equal(competitionBasis.total, 13, "competition basis should be 10 plus 3 for a perfect score");
+const competitionTwoWrongMaximum = RocketMath.game.computeRewards({
+  mode: "competition",
+  groupName: "challenger",
+  operationSet: "all",
+  difficulty: "hard",
+  rangeMax: 30,
   correctCount: 8,
-  correctionRate: 80,
-  averageCorrectSeconds: 4
-}, {
-  correctionRate: 90,
-  averageCorrectSeconds: 6
+  totalQuestions: 10
 });
-assert.equal(accuracyFirst.speedImprovement, 0, "speed bonus must not reward lower accuracy");
-assert(accuracyFirst.difficulty <= 8, "difficulty bonus must not exceed correct-answer stars");
+assert.deepEqual(JSON.parse(JSON.stringify(competitionTwoWrongMaximum)), {
+  completion: 10,
+  perfect: 0,
+  accuracy: 1,
+  operations: 2,
+  difficulty: 2,
+  range: 2,
+  total: 17
+});
 
 const draw = RocketMath.game.compareCompetition(
-  { correctionRate: 80, elapsedSeconds: 30 },
-  { correctionRate: 80, elapsedSeconds: 30 }
+  { baseStars: 13, correctCount: 10, totalQuestions: 10, elapsedSeconds: 30 },
+  { baseStars: 13, correctCount: 10, totalQuestions: 10, elapsedSeconds: 30 }
 );
 assert.equal(draw.winnerGroup, "draw");
-assert.equal(draw.bonuses.cxy, RocketMath.game.RULES.drawBonus);
+assert.deepEqual(JSON.parse(JSON.stringify(draw.bonuses)), { cxy: 0, challenger: 0 });
 
 const challengerWin = RocketMath.game.compareCompetition(
-  { baseStars: 10, correctionRate: 90, elapsedSeconds: 40 },
-  { baseStars: 10, correctionRate: 90, elapsedSeconds: 35 }
+  { baseStars: 13, correctCount: 10, totalQuestions: 10, elapsedSeconds: 40 },
+  { baseStars: 13, correctCount: 10, totalQuestions: 10, elapsedSeconds: 35 }
 );
 assert.equal(challengerWin.winnerGroup, "challenger");
+assert.equal(challengerWin.bonuses.challenger, 2);
 
-const difficultyAdjustedWin = RocketMath.game.compareCompetition(
-  { baseStars: 15, correctionRate: 80, averageCorrectSeconds: 8 },
-  { baseStars: 14, correctionRate: 100, averageCorrectSeconds: 4 }
+const perfectFirstWin = RocketMath.game.compareCompetition(
+  { baseStars: 13, correctCount: 10, totalQuestions: 10, elapsedSeconds: 40 },
+  { baseStars: 18, correctCount: 9, totalQuestions: 10, elapsedSeconds: 30 }
 );
-assert.equal(difficultyAdjustedWin.winnerGroup, "cxy", "difficulty-adjusted stars should decide first");
+assert.equal(perfectFirstWin.winnerGroup, "cxy", "the only perfect pilot must win even with fewer stars");
+const dailyBonusWin = RocketMath.game.compareCompetition(
+  { baseStars: 10, dailyGoalBonus: 3, correctCount: 7, totalQuestions: 10, elapsedSeconds: 40 },
+  { baseStars: 10, dailyGoalBonus: 0, correctCount: 7, totalQuestions: 10, elapsedSeconds: 30 }
+);
+assert.equal(dailyBonusWin.winnerGroup, "cxy", "all displayed competition stars should count when neither pilot is perfect");
+
+let competitionProgress = storage.createDefaultProgress();
+const competitionCxy = {
+  ...result,
+  sessionId: "competition-cxy",
+  mode: "competition",
+  correctCount: 10,
+  totalQuestions: 10,
+  baseStars: 13,
+  elapsedSeconds: 30,
+  rewards: competitionBasis
+};
+const competitionChallenger = {
+  ...competitionCxy,
+  sessionId: "competition-challenger",
+  groupName: "challenger",
+  rangeMax: 15,
+  elapsedSeconds: 40
+};
+competitionProgress = storage.recordGameResult(competitionProgress, competitionCxy).progress;
+competitionProgress = storage.recordGameResult(competitionProgress, competitionChallenger).progress;
+const storedComparison = RocketMath.game.compareCompetition(competitionCxy, competitionChallenger);
+competitionProgress = storage.recordCompetition(competitionProgress, {
+  id: "competition-one",
+  playedAt: result.playedAt,
+  winner: storedComparison.winner,
+  winnerGroup: storedComparison.winnerGroup,
+  bonuses: storedComparison.bonuses,
+  cxy: competitionCxy,
+  challenger: competitionChallenger
+});
+assert.equal(competitionProgress.totalStars, 28, "competition totals should include the faster pilot's 2 stars");
+assert.equal(competitionProgress.groupStars.cxy, 15);
+assert.equal(competitionProgress.competitionTurnHistory.find((item) => item.groupName === "cxy").speedStars, 2);
 
 progress = storage.recordConfig(recorded.progress, {
   groupName: "cxy",

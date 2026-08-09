@@ -1896,3 +1896,312 @@ body.is-playing .game-shell {
     min-height: 36px;
   }
 }
+
+/* Seven-day progress, star summaries, scoring details, and tighter selectors */
+.progress-card {
+  position: relative;
+}
+
+.star-overview {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.8fr) minmax(0, 1.35fr);
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.total-stars-summary,
+.today-stars-summary {
+  position: relative;
+  display: grid;
+  align-content: center;
+  min-height: 66px;
+  padding: 8px 11px;
+  border-radius: 13px;
+  background: #fff3bd;
+}
+
+.total-stars-summary > span,
+.today-stars-summary > span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.total-stars-summary > strong {
+  color: #785800;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1;
+}
+
+.today-stars-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  background: #edf7ff;
+}
+
+.today-stars-summary > span {
+  display: grid;
+  gap: 2px;
+  padding: 5px 7px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.82);
+  text-align: center;
+}
+
+.today-stars-summary strong {
+  color: var(--blue-dark);
+  font-size: clamp(1rem, 2vw, 1.4rem);
+}
+
+.challenger-progress .today-stars-summary strong {
+  color: var(--purple-dark);
+}
+
+.leader-trophy {
+  position: absolute;
+  top: -14px;
+  right: -9px;
+  display: grid;
+  width: clamp(42px, 5vw, 62px);
+  height: clamp(42px, 5vw, 62px);
+  place-items: center;
+  border: 3px solid #ffd24e;
+  border-radius: 50%;
+  background: #fff9d7;
+  box-shadow: 0 6px 0 #e8aa22, 0 10px 18px rgba(232, 170, 34, 0.28);
+  font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+  line-height: 1;
+  animation: big-celebration-pop 750ms ease-out both;
+}
+
+.star-leader {
+  border-color: #f0c232;
+  box-shadow: 0 0 0 3px rgba(255, 211, 86, 0.24), 0 10px 22px rgba(232, 170, 34, 0.18);
+}
+
+.progress-chart {
+  height: clamp(170px, 19vw, 225px);
+}
+
+.chart-date {
+  font-size: 8.5px;
+}
+
+.bar-value {
+  fill: #13714e;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.96);
+  stroke-width: 3px;
+}
+
+.accuracy-value {
+  fill: #155fae;
+  font-size: 9.5px;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+.challenger-progress .accuracy-value {
+  fill: #6740cf;
+}
+
+.mission-options {
+  gap: 5px;
+}
+
+.mission-options label {
+  grid-template-rows: auto 32px;
+  min-height: 48px;
+  font-size: 0.65rem;
+}
+
+.mission-options select {
+  height: 32px;
+  min-height: 32px;
+  padding: 3px 24px 3px 7px;
+  border-radius: 9px;
+  font-size: clamp(0.68rem, 0.95vw, 0.8rem);
+}
+
+.mission-options label.select-expanded select {
+  top: 17px;
+  height: 42px;
+  min-height: 42px;
+  font-size: 0.9rem;
+}
+
+.competition-detail-card {
+  position: relative;
+  padding: clamp(10px, 1.4vw, 16px);
+  overflow: visible;
+}
+
+body.is-result .result-panel {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.competition-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: clamp(48px, 6vw, 78px);
+}
+
+.competition-card-heading h3 {
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+}
+
+.competition-total-stars {
+  color: #7b5900;
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  line-height: 1;
+}
+
+.competition-big-trophy {
+  position: absolute;
+  top: -17px;
+  right: -8px;
+  display: grid;
+  width: clamp(58px, 7vw, 88px);
+  height: clamp(58px, 7vw, 88px);
+  place-items: center;
+  border: 4px solid #ffd34e;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffce7, #ffd34e);
+  box-shadow: 0 7px 0 #dfa31d, 0 13px 25px rgba(223, 163, 29, 0.3);
+  font-size: clamp(2.6rem, 5vw, 4.2rem);
+  line-height: 1;
+  animation: big-celebration-pop 850ms ease-out both;
+}
+
+.competition-star-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  padding: 8px 9px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.competition-star-details dt,
+.competition-star-details dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(0.68rem, 1.05vw, 0.82rem);
+  font-weight: 900;
+}
+
+.competition-star-details dd {
+  color: #785800;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .star-overview {
+    grid-template-columns: minmax(115px, 0.7fr) minmax(0, 1.3fr);
+    gap: 6px;
+  }
+
+  .total-stars-summary,
+  .today-stars-summary {
+    min-height: 58px;
+    padding: 6px 7px;
+  }
+
+  .total-stars-summary > strong {
+    font-size: 1.9rem;
+  }
+
+  .today-stars-summary > span {
+    padding: 3px;
+    font-size: 0.58rem;
+  }
+
+  .today-stars-summary strong {
+    font-size: 0.92rem;
+  }
+
+  .leader-trophy {
+    top: -10px;
+    right: -6px;
+    width: 42px;
+    height: 42px;
+    border-width: 2px;
+    font-size: 1.8rem;
+  }
+
+  .progress-chart {
+    height: 165px;
+  }
+
+  .mission-options label {
+    grid-template-rows: auto 30px;
+    min-height: 45px;
+    font-size: 0.52rem;
+  }
+
+  .mission-options select {
+    height: 30px;
+    min-height: 30px;
+    padding: 2px 20px 2px 5px;
+    font-size: 0.61rem;
+  }
+
+  .mission-options label.select-expanded select {
+    top: 16px;
+    height: 40px;
+    min-height: 40px;
+    font-size: 0.86rem;
+  }
+
+  .competition-result {
+    gap: 7px;
+  }
+
+  .competition-detail-card {
+    padding: 8px;
+  }
+
+  .competition-card-heading {
+    padding-right: 44px;
+  }
+
+  .competition-big-trophy {
+    top: -10px;
+    width: 52px;
+    height: 52px;
+    border-width: 3px;
+    font-size: 2.35rem;
+  }
+
+  .competition-star-details {
+    gap: 3px 7px;
+    margin-top: 7px;
+    padding: 6px;
+  }
+
+  .competition-star-details dt,
+  .competition-star-details dd {
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .progress-card-heading {
+    display: flex;
+  }
+
+  .progress-card-heading p {
+    margin-top: 0;
+    text-align: right;
+  }
+
+  .competition-result {
+    grid-template-columns: 1fr;
+  }
+}

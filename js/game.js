@@ -4,11 +4,13 @@
   const RocketMath = window.RocketMath || {};
   const RULES = Object.freeze({
     totalQuestions: 10,
-    completionStars: 2,
-    starsPerCorrect: 1,
+    practicePerfectStars: 5,
+    competitionCompletionStars: 10,
+    competitionPerfectStars: 3,
+    competitionOneWrongStars: 2,
+    competitionTwoWrongStars: 1,
+    competitionSpeedStars: 2,
     starsPerRetry: 1,
-    winnerBonus: 2,
-    drawBonus: 1,
     answerDelayMs: 720
   });
 
@@ -160,11 +162,6 @@
       state.currentStreak += 1;
       state.maxStreak = Math.max(state.maxStreak, state.currentStreak);
       state.correctResponseTimes.push(Math.max(100, Date.now() - state.questionStartedAt));
-      state.sessionStars += RULES.starsPerCorrect;
-      if (state.currentStreak >= 5 && !state.streakStarEarned) {
-        state.sessionStars += 1;
-        state.streakStarEarned = true;
-      }
       RocketMath.ui.updateScore(state.sessionStars);
       RocketMath.ui.updateStreak(state.currentStreak);
       RocketMath.ui.updateCompetitionHud(getHudState());
@@ -233,7 +230,7 @@
     };
 
     const previous = RocketMath.storage.getPreviousResult(state.progress, result);
-    result.rewards = computeRewards(result, previous);
+    result.rewards = computeRewards(result);
     result.baseStars = result.rewards.total;
     const recorded = RocketMath.storage.recordGameResult(state.progress, result);
     state.progress = recorded.progress;
@@ -249,34 +246,41 @@
     else RocketMath.ui.renderResult(result, state.progress, recorded.previous);
   }
 
-  function computeRewards(result, previous) {
-    const accuracy = result.correctionRate === 100
-      ? 4
-      : (result.correctionRate >= 90 ? 2 : (result.correctionRate >= 80 ? 1 : 0));
-    const accuracyImprovement = previous && result.correctionRate > previous.correctionRate ? 2 : 0;
-    const speedImprovement = previous
-      && result.correctionRate >= previous.correctionRate
-      && result.averageCorrectSeconds > 0
-      && Number(previous.averageCorrectSeconds) > 0
-      && result.averageCorrectSeconds <= Number(previous.averageCorrectSeconds) * 0.95
-      ? 1
+  function computeRewards(result) {
+    const options = getOptionStars(result);
+    const isCompetition = result.mode === "competition";
+    const wrongCount = Math.max(0, Number(result.totalQuestions) - Number(result.correctCount));
+    const accuracy = isCompetition
+      ? (wrongCount === 0
+        ? RULES.competitionPerfectStars
+        : (wrongCount === 1
+          ? RULES.competitionOneWrongStars
+          : (wrongCount === 2 ? RULES.competitionTwoWrongStars : 0)))
       : 0;
-    const streak = result.maxStreak >= 5 ? 1 : 0;
-    const difficulty = Math.min(
-      result.correctCount,
-      Math.round(result.correctCount * (Math.max(1, result.difficultyMultiplier) - 1))
-    );
+    const perfect = !isCompetition && wrongCount === 0 ? RULES.practicePerfectStars : 0;
+    const optionMultiplier = isCompetition || perfect > 0 ? 1 : 0;
     const rewards = {
-      completion: RULES.completionStars,
-      correct: result.correctCount * RULES.starsPerCorrect,
+      completion: isCompetition ? RULES.competitionCompletionStars : 0,
+      perfect,
       accuracy,
-      accuracyImprovement,
-      speedImprovement,
-      streak,
-      difficulty
+      operations: options.operations * optionMultiplier,
+      difficulty: options.difficulty * optionMultiplier,
+      range: options.range * optionMultiplier
     };
     rewards.total = Object.values(rewards).reduce((sum, value) => sum + value, 0);
     return rewards;
+  }
+
+  function getOptionStars(result) {
+    const operationIndex = ["add-sub", "mul-div", "all"].indexOf(result.operationSet);
+    const difficultyIndex = ["easy", "medium", "hard"].indexOf(result.difficulty);
+    const ranges = result.groupName === "challenger" ? [15, 25, 30] : [10, 15, 20];
+    const rangeIndex = ranges.indexOf(Number(result.rangeMax));
+    return {
+      operations: Math.max(0, operationIndex),
+      difficulty: Math.max(0, difficultyIndex),
+      range: Math.max(0, rangeIndex)
+    };
   }
 
   function handleCompetitionTurn(result) {
@@ -307,26 +311,33 @@
 
   function compareCompetition(cxy, challenger) {
     let winnerGroup = "draw";
-    const cxyStars = Number(cxy.baseStars) || 0;
-    const challengerStars = Number(challenger.baseStars) || 0;
+    const cxyTime = Number(cxy.elapsedSeconds) || Infinity;
+    const challengerTime = Number(challenger.elapsedSeconds) || Infinity;
+    const bonuses = { cxy: 0, challenger: 0 };
+    if (cxyTime < challengerTime) bonuses.cxy = RULES.competitionSpeedStars;
+    else if (challengerTime < cxyTime) bonuses.challenger = RULES.competitionSpeedStars;
+    cxy.speedStars = bonuses.cxy;
+    challenger.speedStars = bonuses.challenger;
 
-    if (cxyStars > challengerStars) winnerGroup = "cxy";
+    const cxyPerfect = Number(cxy.correctCount) === Number(cxy.totalQuestions);
+    const challengerPerfect = Number(challenger.correctCount) === Number(challenger.totalQuestions);
+    const cxyStars = (Number(cxy.baseStars) || 0) + bonuses.cxy + (Number(cxy.dailyGoalBonus) || 0);
+    const challengerStars = (Number(challenger.baseStars) || 0) + bonuses.challenger + (Number(challenger.dailyGoalBonus) || 0);
+
+    if (cxyPerfect !== challengerPerfect) winnerGroup = cxyPerfect ? "cxy" : "challenger";
+    else if (cxyStars > challengerStars) winnerGroup = "cxy";
     else if (challengerStars > cxyStars) winnerGroup = "challenger";
-    else if (cxy.correctionRate > challenger.correctionRate) winnerGroup = "cxy";
-    else if (challenger.correctionRate > cxy.correctionRate) winnerGroup = "challenger";
-    else {
-      const cxySpeed = Number(cxy.averageCorrectSeconds) || Number(cxy.elapsedSeconds) || Infinity;
-      const challengerSpeed = Number(challenger.averageCorrectSeconds) || Number(challenger.elapsedSeconds) || Infinity;
-      if (cxySpeed < challengerSpeed) winnerGroup = "cxy";
-      else if (challengerSpeed < cxySpeed) winnerGroup = "challenger";
-    }
+    else if (Number(cxy.correctCount) > Number(challenger.correctCount)) winnerGroup = "cxy";
+    else if (Number(challenger.correctCount) > Number(cxy.correctCount)) winnerGroup = "challenger";
+    else if (cxyTime < challengerTime) winnerGroup = "cxy";
+    else if (challengerTime < cxyTime) winnerGroup = "challenger";
 
     if (winnerGroup === "draw") {
       return {
         winnerGroup,
         winner: "It’s a draw! 🏆",
         message: "Congratulations to both pilots — your teamwork, courage and progress made this a brilliant race!",
-        bonuses: { cxy: RULES.drawBonus, challenger: RULES.drawBonus },
+        bonuses,
         cxy,
         challenger
       };
@@ -338,10 +349,7 @@
       winnerGroup,
       winner: `${label} wins! 🏆`,
       message: `Congratulations, ${label}! Your progress earned the win! ${runnerUp}, fantastic effort — every answer has made you stronger for the next race.`,
-      bonuses: {
-        cxy: winnerGroup === "cxy" ? RULES.winnerBonus : 0,
-        challenger: winnerGroup === "challenger" ? RULES.winnerBonus : 0
-      },
+      bonuses,
       cxy,
       challenger
     };
@@ -409,6 +417,7 @@
       const recorded = RocketMath.storage.recordRetryBonus(state.progress, {
         retryId: item.id,
         groupName: state.retry.groupName,
+        mode: state.retry.sourceResult.mode,
         stars: RULES.starsPerRetry,
         completedAt: RocketMath.utils.todayString()
       });

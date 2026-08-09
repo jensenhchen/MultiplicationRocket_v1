@@ -14,7 +14,7 @@ The browser app uses HTML, CSS, and vanilla JavaScript. A small dependency-free 
 - Ten questions per mission, followed by a compact result screen and missed-question retry
 - Child-first addition/subtraction generation with at least 60% make-ten or break-ten questions for CXY
 - Age-appropriate number, result, multiplication, and division limits
-- Three-day question-volume bars, accuracy curves, progress highlights, and a 90-question goal (30 per day) for each group
+- Seven-day question-volume bars, correct/total curves, daily star summaries, and a 210-question goal (30 per day) for each group
 - Shared server-file progress with automatic on-device fallback
 - Large animated star and trophy celebrations
 - Supportive feedback after competition mistakes and congratulations for progress and wins
@@ -44,18 +44,16 @@ Easy uses 2 numbers, Medium uses 3, and Hard uses 4. CXY is intentionally gentle
 
 ## Star Scoring
 
-- Finish a ten-question mission: +2
-- Each correct first attempt: +1
-- Accuracy: +1 at 80%, +2 at 90%, or +4 at 100%
-- Improve accuracy over the last matching mission: +2
-- Improve average correct-answer speed by at least 5% without losing accuracy: +1
-- Reach a five-answer correct streak: +1
-- Harder settings: a capped difficulty bonus
-- Correct a missed question during retry: +1
-- Complete more than 30 questions in one day: +1 extra star for each additional block of up to 10 questions
-- Competition winner: +2; draw: +1 per player
+- Practice: a perfect 10/10 earns a 5-star basis.
+- Practice options: each step above the first Operations, Difficulty, or Number range option adds +1 star to a perfect mission.
+- Competition completion: +10 stars.
+- Competition correctness: +3 for 10/10, +2 for 9/10, +1 for 8/10, and +0 for 7/10 or below.
+- Competition options: each step above the first option in Operations, Difficulty, or Number range adds +1 star.
+- Competition speed: the pilot with the shorter total time earns +2 stars.
+- Review: correcting each missed question earns +1 star.
+- Daily volume: after 30 questions in one day, each additional block of up to 10 questions earns +1 extra star.
 
-Speed is measured per correct answer and shown only after the mission. It never rewards rushing at the cost of accuracy.
+An only-perfect pilot wins immediately. Otherwise, total competition stars decide the winner, followed by correct-answer count and total time when needed.
 
 ## Progress Data
 

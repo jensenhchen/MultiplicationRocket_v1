@@ -227,6 +227,7 @@
     progress.retryHistory = [{
       retryId,
       groupName,
+      mode: retry.mode === "competition" ? "competition" : "practice",
       stars: requestedStars,
       completedAt: retry.completedAt || ""
     }, ...progress.retryHistory].slice(0, HISTORY_LIMIT);
@@ -249,6 +250,12 @@
       const bonus = Math.max(0, Number(bonuses[groupName]) || 0);
       progress.groupStars[groupName] += bonus;
       progress.totalStars += bonus;
+    });
+
+    progress.competitionTurnHistory = progress.competitionTurnHistory.map((turn) => {
+      const result = competitionResult[turn.groupName];
+      if (!result || turn.sessionId !== result.sessionId) return turn;
+      return { ...turn, speedStars: Math.max(0, Number(bonuses[turn.groupName]) || 0) };
     });
 
     progress.competitionHistory = [
@@ -302,6 +309,7 @@
       rewards: normalizeRewards(result.rewards),
       baseStars: Number(result.baseStars) || 0,
       retryStars: Number(result.retryStars) || 0,
+      speedStars: Math.max(0, Number(result.speedStars) || 0),
       dailyGoalBonus: Math.max(0, Number(result.dailyGoalBonus) || 0),
       playedAt: result.playedAt || ""
     };
@@ -437,8 +445,11 @@
     const source = rewards && typeof rewards === "object" ? rewards : {};
     return {
       completion: Math.max(0, Number(source.completion) || 0),
+      perfect: Math.max(0, Number(source.perfect) || 0),
       correct: Math.max(0, Number(source.correct) || 0),
       accuracy: Math.max(0, Number(source.accuracy) || 0),
+      operations: Math.max(0, Number(source.operations) || 0),
+      range: Math.max(0, Number(source.range) || 0),
       accuracyImprovement: Math.max(0, Number(source.accuracyImprovement) || 0),
       speedImprovement: Math.max(0, Number(source.speedImprovement) || 0),
       streak: Math.max(0, Number(source.streak) || 0),
