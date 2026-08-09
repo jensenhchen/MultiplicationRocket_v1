@@ -20,6 +20,16 @@
 
   function bindEvents() {
     ui.elements.configSelects.forEach((select) => {
+      select.addEventListener("focus", () => {
+        const label = select.closest("label");
+        if (label) label.classList.add("select-expanded");
+      });
+
+      select.addEventListener("blur", () => {
+        const label = select.closest("label");
+        if (label) label.classList.remove("select-expanded");
+      });
+
       select.addEventListener("change", () => {
         RocketMath.audio.play("click");
         const context = select.dataset.configContext || "practice";

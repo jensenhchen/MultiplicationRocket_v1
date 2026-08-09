@@ -8,6 +8,7 @@ The browser app uses HTML, CSS, and vanilla JavaScript. A small dependency-free 
 
 - Two practice groups: Group 1 `CXY` and Group 2 `Challenger`
 - Practice and Competition settings on the same scrollable page
+- Operations, Difficulty, and Number range stay in one compact row and expand while choosing
 - Independent competition settings for both pilots
 - Addition/subtraction, multiplication/division, and mixed-operation missions
 - Ten questions per mission, followed by a compact result screen and missed-question retry
