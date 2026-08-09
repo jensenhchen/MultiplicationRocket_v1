@@ -1,85 +1,88 @@
-# Math Rocket: + - * /
+# Math Rocket
 
-Math Rocket is a cheerful, offline-friendly browser game for children practising addition, subtraction, multiplication, and division. A child configures a 10-question mission, earns stars, compares the result with the last matching mission, retries missed questions, and can play a two-person CXY vs Challenger competition.
+Math Rocket is a cheerful browser game designed to help a seven-year-old build confidence and speed with mental arithmetic. Its main focus is making ten and breaking ten in addition and subtraction. A parent can join as Challenger to turn practice into a short, friendly competition.
 
-The project is a static Progressive Web App. It uses HTML5, CSS3, and vanilla JavaScript only: no backend, login, database, npm, build tool, CDN, external API, or analytics. Progress never leaves the browser and is saved only in `localStorage`.
+The browser app uses HTML, CSS, and vanilla JavaScript. A small dependency-free Node.js server serves the app and stores shared CXY and Challenger progress in `data/progress.json`. Browser `localStorage` remains an offline fallback.
 
 ## Features
 
-- Group 1 `CXY` and Group 2 `Challenger`
-- Three operation sets: addition/subtraction, multiplication/division, or all four operations
-- Easy (2 numbers), Medium (3 numbers), and Hard (4 numbers)
-- CXY ranges: 1–10, 1–15, and 1–20
-- Challenger ranges: 1–15, 1–25, and 1–30
-- Ten unique, balanced multiple-choice questions per main mission
-- Exact division, non-negative subtraction, integer results, and age-appropriate result limits
-- Per-configuration comparison with the previous matching mission
-- Retry queue for missed questions, repeated until correct
-- Base, retry, winner, and draw star rewards
-- CXY-first, Challenger-second competition with accuracy and time comparison
-- Responsive rocket scene, encouragement, music, sound effects, and celebration animation
-- Installable PWA and offline app shell
-- Keyboard answer shortcuts 1–4, touch-friendly controls, safe areas, and reduced-motion support
+- Two practice groups: Group 1 `CXY` and Group 2 `Challenger`
+- Practice and Competition settings on the same scrollable page
+- Independent competition settings for both pilots
+- Addition/subtraction, multiplication/division, and mixed-operation missions
+- Ten questions per mission, followed by a compact result screen and missed-question retry
+- Child-first addition/subtraction generation with at least 60% make-ten or break-ten questions for CXY
+- Age-appropriate number, result, multiplication, and division limits
+- Three-day question-volume bars, accuracy curves, progress highlights, and per-group goals
+- Shared server-file progress with automatic on-device fallback
+- Large animated star and trophy celebrations
+- Supportive feedback after competition mistakes and congratulations for progress and wins
+- Music, sound effects, rocket animation, confetti, and encouraging English messages
+- Responsive layouts for Windows PCs, iPad, iPhone, and Android phones
+- Installable PWA with offline app-shell caching
 
-## Mission Settings
+## Mission Defaults
 
 | Group | Default | Number ranges |
 | --- | --- | --- |
-| CXY | Addition & Subtraction · Medium · 1–10 | 1–10, 1–15, 1–20 |
-| Challenger | Addition & Subtraction · Medium · 1–15 | 1–15, 1–25, 1–30 |
+| CXY | Addition & Subtraction · Easy · 1–10 | 1–10, 1–15, 1–20 |
+| Challenger | Addition & Subtraction · Medium · 1–25 | 1–15, 1–25, 1–30 |
 
-Difficulty controls the number of operands: Easy has 2, Medium has 3, and Hard has 4. Multi-step expressions use explicit parentheses and are evaluated safely without `eval()`.
+Easy uses 2 numbers, Medium uses 3, and Hard uses 4. CXY is intentionally gentler; Challenger provides a suitable parent target without making the child’s mission discouraging.
 
-## Child-Friendly Generation Rules
+## Child-Friendly Generation
 
-- Every displayed operand stays inside the selected range.
-- Subtraction and every intermediate step stay non-negative.
-- Division is exact and never divides by zero.
-- Result limits are centralized in `js/questions.js`:
-  - CXY: 40 (Easy), 80 (Medium), 120 (Hard)
-  - Challenger: 100 (Easy), 180 (Medium), 300 (Hard)
-- Multiplication factor limits prevent chains of very large products.
-- Selected operators are rotated across each 10-question set for balanced coverage.
-- Four distinct choices are generated for every question, including exactly one correct answer.
+- CXY Easy addition/subtraction stays within the chosen number range.
+- Every intermediate subtraction result is non-negative.
+- Make-ten problems encourage completing the next ten, such as `7 + 3`.
+- Break-ten problems encourage subtracting to ten first, such as `13 − 5`.
+- Multiplication uses controlled fact tables; CXY Easy starts with 2, 5, and 10.
+- Division is exact, uses no zero divisor, and avoids oversized dividends.
+- Every question has four distinct choices and one correct answer.
+- Expressions are evaluated safely without `eval()`.
 
-## Stars
+## Star Scoring
 
-- Correct on the first attempt: 10 stars
-- Correct during missed-question retry: 5 stars, once per original missed question
-- Competition winner: 20 bonus stars
-- Exact draw: 10 bonus stars per group
+- Finish a ten-question mission: +2
+- Each correct first attempt: +1
+- Accuracy: +1 at 80%, +2 at 90%, or +4 at 100%
+- Improve accuracy over the last matching mission: +2
+- Improve average correct-answer speed by at least 5% without losing accuracy: +1
+- Reach a five-answer correct streak: +1
+- Harder settings: a capped difficulty bonus
+- Correct a missed question during retry: +1
+- Competition winner: +2; draw: +1 per player
 
-Competition winners are determined only by the original 10 questions. Higher accuracy wins; equal accuracy is decided by shorter time; matching accuracy and time is a draw.
+Speed is measured per correct answer and shown only after the mission. It never rewards rushing at the cost of accuracy.
 
-## Local Data
+## Progress Data
 
-`js/storage.js` stores versioned progress under `mathRocket.progress.v2`. It includes total and per-group stars, recent practice and competition history, last results by exact mission configuration, missed questions, retry completion, group statistics, and dates. The loader can migrate the previous progress key and maps the previous second-group statistics to Challenger.
+The Node server writes versioned progress to `data/progress.json`. The file is created automatically on the first run and contains CXY and Challenger settings, practice and competition history, retries, accuracy, question totals, and timing. The file is excluded from Git so deployment updates do not overwrite a child’s progress.
 
-Audio settings are stored separately. Storage failures are caught so the game remains playable in private browsing or when storage is unavailable.
+The browser mirrors this data in `localStorage` so a temporary connection problem does not stop a mission. When the server is reachable again, new results are written to the server file.
 
-## Run Locally
+## Run and Debug in VS Code
 
-Opening `index.html` is enough for a basic view. PWA and offline behavior require `localhost` or HTTPS:
+In the VS Code terminal, run:
 
 ```bash
-node tests/static-server.js 8765
+node server.js 8765
 ```
 
-Then open `http://127.0.0.1:8765/`.
+Then open `http://127.0.0.1:8765/`. The server progress file appears at `data/progress.json` after the first saved setting or completed mission.
+
+The server listens on all network interfaces by default, so another device on the same Wi-Fi can use `http://YOUR-PC-IP:8765/` while the server is running and the Windows firewall permits the connection.
 
 ## Verification
 
-Run syntax and generator/storage rules without installing dependencies:
+No dependency installation is required:
 
 ```bash
 node --check js/app.js
 node tests/core.test.js
+node tests/server.test.js
 ```
 
-`tests/core.test.js` exercises every group, operation set, difficulty, and range, then checks storage comparison, one-time retry rewards, and competition tie-breaking.
+## Deployment and Offline Use
 
-See `docs/TEST_PLAN.md` for responsive, browser, localStorage, competition, and offline checks.
-
-## GitHub Pages and Offline Use
-
-All paths are relative, so the repository can be deployed from a GitHub Pages subdirectory. Load the published game once while online to cache the app shell. On iPad, use Safari’s **Add to Home Screen** action to install Math Rocket.
+Server-file persistence requires a Node.js host with a writable, persistent disk. GitHub Pages can display the app but cannot write `data/progress.json`; use a Node-capable host for shared progress across iPad, phone, and PC. Load the deployed game once while online to cache the app shell. On iPad or iPhone, use Safari’s **Add to Home Screen** action to install Math Rocket.

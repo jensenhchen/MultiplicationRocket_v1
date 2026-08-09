@@ -1,4 +1,4 @@
-const CACHE_NAME = "math-rocket-v2.0.1";
+const CACHE_NAME = "math-rocket-v3.2.0";
 const BASE_URL = self.registration.scope;
 
 const REQUIRED_ASSETS = [
@@ -22,6 +22,7 @@ const REQUIRED_ASSETS = [
   "./assets/images/smoke.svg",
   "./assets/images/stars.svg",
   "./assets/images/clouds.svg",
+  "./assets/images/math-operators.png",
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",
   "./assets/icons/apple-touch-icon.png",
@@ -58,6 +59,7 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
+  if (requestUrl.pathname.endsWith("/api/progress")) return;
 
   if (event.request.mode === "navigate" || acceptsHtml(event.request)) {
     event.respondWith(networkFirstHtml(event.request));

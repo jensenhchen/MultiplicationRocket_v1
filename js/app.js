@@ -4,8 +4,14 @@
   const RocketMath = window.RocketMath;
   const ui = RocketMath.ui;
 
-  function boot() {
-    const progress = RocketMath.storage.loadProgress();
+  async function boot() {
+    const localProgress = RocketMath.storage.loadProgress();
+    let progress = localProgress;
+    try {
+      progress = await RocketMath.storage.loadServerProgress(localProgress);
+    } catch (error) {
+      // Continue with the on-device copy when the server is offline.
+    }
     RocketMath.game.init(progress);
     ui.updateAudioButtons(RocketMath.audio.getSettings());
     bindEvents();
@@ -16,6 +22,10 @@
     ui.elements.configSelects.forEach((select) => {
       select.addEventListener("change", () => {
         RocketMath.audio.play("click");
+        const context = select.dataset.configContext || "practice";
+        if (context === "practice") {
+          RocketMath.game.saveConfig(ui.getConfig(select.dataset.configGroup, "practice"));
+        }
         ui.updateCompetitionSummaries();
       });
     });
@@ -25,7 +35,7 @@
         RocketMath.audio.unlock();
         RocketMath.audio.play("click");
         RocketMath.game.start({
-          ...ui.getConfig(button.dataset.group),
+          ...ui.getConfig(button.dataset.group, "practice"),
           mode: "practice"
         });
       });
@@ -35,8 +45,8 @@
       RocketMath.audio.unlock();
       RocketMath.audio.play("click");
       RocketMath.game.startCompetition({
-        cxy: ui.getConfig("cxy"),
-        challenger: ui.getConfig("challenger")
+        cxy: ui.getConfig("cxy", "competition"),
+        challenger: ui.getConfig("challenger", "competition")
       });
     });
 
@@ -82,12 +92,6 @@
       ui.updateAudioButtons(RocketMath.audio.getSettings());
     });
 
-    ui.elements.resetProgressButton.addEventListener("click", () => {
-      RocketMath.audio.play("click");
-      RocketMath.game.resetProgress();
-      ui.elements.savedProgress.textContent = "Progress reset. Ready for a fresh launch!";
-    });
-
     document.addEventListener("keydown", (event) => {
       if (event.key < "1" || event.key > "4") return;
       const buttons = [...ui.elements.answerButtons.querySelectorAll(".answer-button:not(:disabled)")];
@@ -109,8 +113,8 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
+    document.addEventListener("DOMContentLoaded", () => { void boot(); });
   } else {
-    boot();
+    void boot();
   }
 })();

@@ -4,20 +4,33 @@
   const RocketMath = window.RocketMath || {};
   const RULES = Object.freeze({
     totalQuestions: 10,
-    starsPerCorrect: 10,
-    starsPerRetry: 5,
-    winnerBonus: 20,
-    drawBonus: 10,
-    answerDelayMs: 850
+    completionStars: 2,
+    starsPerCorrect: 1,
+    starsPerRetry: 1,
+    winnerBonus: 2,
+    drawBonus: 1,
+    answerDelayMs: 720
   });
 
   const encouragements = [
-    "Star power! Great job!",
-    "Rocket boost! Awesome thinking!",
-    "Fantastic maths!",
+    "Star power! Great thinking!",
+    "Rocket boost!",
     "You found it!",
+    "Nice number work!",
     "Keep flying!",
-    "Nice thinking!"
+    "Brilliant step!"
+  ];
+  const competitionProgressMessages = [
+    "Fantastic progress — your competition rocket is climbing!",
+    "Brilliant answer — you are building a strong lead!",
+    "Great focus — another point for your mission!",
+    "Congratulations on that step — keep the momentum going!"
+  ];
+  const competitionRecoveryMessages = [
+    "Brave try! Use the hint and get ready for a strong comeback!",
+    "Keep going — one tricky question cannot stop your rocket!",
+    "Good effort! Reset, make ten, and come back even stronger!",
+    "Almost there — every mistake is training for the next win!"
   ];
 
   const state = {
@@ -30,6 +43,11 @@
     currentQuestion: null,
     sessionStars: 0,
     correctCount: 0,
+    currentStreak: 0,
+    maxStreak: 0,
+    streakStarEarned: false,
+    correctResponseTimes: [],
+    questionStartedAt: 0,
     wrongAnswers: [],
     startTime: 0,
     timerId: null,
@@ -42,15 +60,16 @@
 
   function init(progress) {
     state.progress = RocketMath.storage.normalizeProgress(progress);
+    RocketMath.ui.applyConfigs(state.progress.configs);
     RocketMath.ui.renderProgress(state.progress);
     RocketMath.ui.updateCompetitionSummaries();
     RocketMath.ui.showScreen("start");
   }
 
   function start(options) {
+    state.competition = null;
     const config = RocketMath.questions.normalizeOptions(options);
-    const mode = options && options.mode === "competition" ? "competition" : "practice";
-    startMainSession(config, mode);
+    startMainSession(config, "practice");
   }
 
   function startMainSession(config, mode) {
@@ -63,6 +82,10 @@
     state.currentQuestion = null;
     state.sessionStars = 0;
     state.correctCount = 0;
+    state.currentStreak = 0;
+    state.maxStreak = 0;
+    state.streakStarEarned = false;
+    state.correctResponseTimes = [];
     state.wrongAnswers = [];
     state.acceptingAnswers = false;
     state.retry = null;
@@ -101,6 +124,7 @@
 
     state.currentQuestion = state.questions[state.questionIndex];
     state.acceptingAnswers = true;
+    state.questionStartedAt = Date.now();
     RocketMath.ui.renderQuestion(
       state.currentQuestion,
       state.questionIndex + 1,
@@ -108,7 +132,8 @@
       state.sessionStars,
       getMissionLabel(),
       state.config,
-      false
+      false,
+      getHudState()
     );
     RocketMath.animation.setRocketState(RocketMath.ui.elements.rocket, "idle");
   }
@@ -120,38 +145,54 @@
     const isCorrect = answerNumber === state.currentQuestion.answer;
     state.acceptingAnswers = false;
     RocketMath.ui.setAnswerButtonsDisabled(true);
-    RocketMath.ui.markAnswer(answerNumber, state.currentQuestion.answer);
+    RocketMath.ui.markAnswer(answerNumber, state.currentQuestion.answer, isCorrect);
 
     if (state.phase === "retry") {
       answerRetry(answerNumber, isCorrect);
       return;
     }
-
     answerMain(answerNumber, isCorrect);
   }
 
   function answerMain(answerNumber, isCorrect) {
     if (isCorrect) {
-      state.sessionStars += RULES.starsPerCorrect;
       state.correctCount += 1;
+      state.currentStreak += 1;
+      state.maxStreak = Math.max(state.maxStreak, state.currentStreak);
+      state.correctResponseTimes.push(Math.max(100, Date.now() - state.questionStartedAt));
+      state.sessionStars += RULES.starsPerCorrect;
+      if (state.currentStreak >= 5 && !state.streakStarEarned) {
+        state.sessionStars += 1;
+        state.streakStarEarned = true;
+      }
       RocketMath.ui.updateScore(state.sessionStars);
-      RocketMath.animation.moveRocket(
-        RocketMath.ui.elements.rocket,
-        state.correctCount / RULES.totalQuestions
-      );
+      RocketMath.ui.updateStreak(state.currentStreak);
+      RocketMath.ui.updateCompetitionHud(getHudState());
+      RocketMath.animation.moveRocket(RocketMath.ui.elements.rocket, state.correctCount / RULES.totalQuestions);
       RocketMath.animation.setRocketState(RocketMath.ui.elements.rocket, "correct");
       RocketMath.audio.play("correct");
       RocketMath.audio.play("boost");
-      RocketMath.ui.showMessage(encouragements[RocketMath.utils.randomNumber(0, encouragements.length - 1)]);
+      const successMessage = state.mode === "competition"
+        ? `${RocketMath.questions.getGroup(state.config.groupName).name}: ${competitionProgressMessages[randomIndex(competitionProgressMessages)]}`
+        : encouragements[randomIndex(encouragements)];
+      RocketMath.ui.showMessage(successMessage, state.mode === "competition" ? "success" : "neutral");
     } else {
+      state.currentStreak = 0;
+      RocketMath.ui.updateStreak(0);
       RocketMath.animation.setRocketState(RocketMath.ui.elements.rocket, "wrong");
       RocketMath.audio.play("wrong");
-      RocketMath.ui.showMessage(`Good try! The answer is ${state.currentQuestion.answer}.`);
+      RocketMath.ui.showHint(state.currentQuestion.hint);
+      const recoveryMessage = state.mode === "competition"
+        ? `${RocketMath.questions.getGroup(state.config.groupName).name}: ${competitionRecoveryMessages[randomIndex(competitionRecoveryMessages)]}`
+        : "Good try — use the hint. This one will come back!";
+      RocketMath.ui.showMessage(recoveryMessage, state.mode === "competition" ? "encourage" : "neutral");
       state.wrongAnswers.push({
         id: `${state.sessionId}-q${state.questionIndex + 1}`,
         expression: state.currentQuestion.expression,
         correct: state.currentQuestion.answer,
         chosen: answerNumber,
+        hint: state.currentQuestion.hint,
+        strategy: state.currentQuestion.strategy,
         groupName: state.config.groupName,
         questionData: copyQuestion(state.currentQuestion)
       });
@@ -165,6 +206,10 @@
     stopTimer();
     state.acceptingAnswers = false;
     const elapsedSeconds = getElapsedSeconds();
+    const averageCorrectSeconds = state.correctResponseTimes.length
+      ? Number((state.correctResponseTimes.reduce((sum, value) => sum + value, 0)
+        / state.correctResponseTimes.length / 1000).toFixed(1))
+      : 0;
     const result = {
       sessionId: state.sessionId,
       mode: state.mode,
@@ -173,17 +218,23 @@
       operationSet: state.config.operationSet,
       difficulty: state.config.difficulty,
       rangeMax: state.config.rangeMax,
+      difficultyMultiplier: RocketMath.questions.getDifficultyMultiplier(state.config),
       correctCount: state.correctCount,
       totalQuestions: RULES.totalQuestions,
       correctionRate: Math.round((state.correctCount / RULES.totalQuestions) * 100),
       elapsedSeconds,
-      baseStars: state.sessionStars,
+      averageCorrectSeconds,
+      maxStreak: state.maxStreak,
+      baseStars: 0,
       retryStars: 0,
       wrongAnswers: state.wrongAnswers.map((item) => ({ ...item })),
       playedAt: RocketMath.utils.todayString(),
       message: getResultMessage(state.correctCount)
     };
 
+    const previous = RocketMath.storage.getPreviousResult(state.progress, result);
+    result.rewards = computeRewards(result, previous);
+    result.baseStars = result.rewards.total;
     const recorded = RocketMath.storage.recordGameResult(state.progress, result);
     state.progress = recorded.progress;
     result.previous = recorded.previous;
@@ -193,11 +244,38 @@
     RocketMath.ui.renderProgress(state.progress);
     RocketMath.ui.showScreen("result");
 
-    if (state.mode === "competition") {
-      handleCompetitionTurn(result);
-    } else {
-      RocketMath.ui.renderResult(result, state.progress, recorded.previous);
-    }
+    if (state.mode === "competition") handleCompetitionTurn(result);
+    else RocketMath.ui.renderResult(result, state.progress, recorded.previous);
+  }
+
+  function computeRewards(result, previous) {
+    const accuracy = result.correctionRate === 100
+      ? 4
+      : (result.correctionRate >= 90 ? 2 : (result.correctionRate >= 80 ? 1 : 0));
+    const accuracyImprovement = previous && result.correctionRate > previous.correctionRate ? 2 : 0;
+    const speedImprovement = previous
+      && result.correctionRate >= previous.correctionRate
+      && result.averageCorrectSeconds > 0
+      && Number(previous.averageCorrectSeconds) > 0
+      && result.averageCorrectSeconds <= Number(previous.averageCorrectSeconds) * 0.95
+      ? 1
+      : 0;
+    const streak = result.maxStreak >= 5 ? 1 : 0;
+    const difficulty = Math.min(
+      result.correctCount,
+      Math.round(result.correctCount * (Math.max(1, result.difficultyMultiplier) - 1))
+    );
+    const rewards = {
+      completion: RULES.completionStars,
+      correct: result.correctCount * RULES.starsPerCorrect,
+      accuracy,
+      accuracyImprovement,
+      speedImprovement,
+      streak,
+      difficulty
+    };
+    rewards.total = Object.values(rewards).reduce((sum, value) => sum + value, 0);
+    return rewards;
   }
 
   function handleCompetitionTurn(result) {
@@ -228,22 +306,25 @@
 
   function compareCompetition(cxy, challenger) {
     let winnerGroup = "draw";
+    const cxyStars = Number(cxy.baseStars) || 0;
+    const challengerStars = Number(challenger.baseStars) || 0;
 
-    if (cxy.correctionRate > challenger.correctionRate) {
-      winnerGroup = "cxy";
-    } else if (challenger.correctionRate > cxy.correctionRate) {
-      winnerGroup = "challenger";
-    } else if (cxy.elapsedSeconds < challenger.elapsedSeconds) {
-      winnerGroup = "cxy";
-    } else if (challenger.elapsedSeconds < cxy.elapsedSeconds) {
-      winnerGroup = "challenger";
+    if (cxyStars > challengerStars) winnerGroup = "cxy";
+    else if (challengerStars > cxyStars) winnerGroup = "challenger";
+    else if (cxy.correctionRate > challenger.correctionRate) winnerGroup = "cxy";
+    else if (challenger.correctionRate > cxy.correctionRate) winnerGroup = "challenger";
+    else {
+      const cxySpeed = Number(cxy.averageCorrectSeconds) || Number(cxy.elapsedSeconds) || Infinity;
+      const challengerSpeed = Number(challenger.averageCorrectSeconds) || Number(challenger.elapsedSeconds) || Infinity;
+      if (cxySpeed < challengerSpeed) winnerGroup = "cxy";
+      else if (challengerSpeed < cxySpeed) winnerGroup = "challenger";
     }
 
     if (winnerGroup === "draw") {
       return {
         winnerGroup,
         winner: "It’s a draw! 🏆",
-        message: "Two brilliant rocket pilots! You both earn a draw bonus.",
+        message: "Congratulations to both pilots — your teamwork, courage and progress made this a brilliant race!",
         bonuses: { cxy: RULES.drawBonus, challenger: RULES.drawBonus },
         cxy,
         challenger
@@ -251,10 +332,11 @@
     }
 
     const label = RocketMath.questions.getGroup(winnerGroup).name;
+    const runnerUp = RocketMath.questions.getGroup(winnerGroup === "cxy" ? "challenger" : "cxy").name;
     return {
       winnerGroup,
       winner: `${label} wins! 🏆`,
-      message: `Congratulations, ${label}! Both players built more math power today.`,
+      message: `Congratulations, ${label}! Your progress earned the win! ${runnerUp}, fantastic effort — every answer has made you stronger for the next race.`,
       bonuses: {
         cxy: winnerGroup === "cxy" ? RULES.winnerBonus : 0,
         challenger: winnerGroup === "challenger" ? RULES.winnerBonus : 0
@@ -266,15 +348,12 @@
 
   function startRetry(groupName) {
     const normalizedGroup = groupName === "challenger" ? "challenger" : "cxy";
-    const sourceResult = state.competition
-      ? state.competition[normalizedGroup]
-      : state.lastResult;
-
+    const sourceResult = state.competition ? state.competition[normalizedGroup] : state.lastResult;
     if (!sourceResult || sourceResult.groupName !== normalizedGroup) return;
     const pending = sourceResult.wrongAnswers
       .filter((item) => !state.progress.completedRetries.includes(item.id))
       .map((item) => ({ ...item, questionData: RocketMath.questions.refreshChoices(item.questionData) }));
-    if (pending.length === 0) return;
+    if (!pending.length) return;
 
     state.phase = "retry";
     state.mode = sourceResult.mode;
@@ -290,8 +369,10 @@
     };
     state.currentQuestion = null;
     state.acceptingAnswers = false;
+    state.currentStreak = 0;
     startTimer();
     RocketMath.ui.updateScore(0);
+    RocketMath.ui.updateStreak(0);
     RocketMath.animation.moveRocket(RocketMath.ui.elements.rocket, 0);
     RocketMath.ui.showScreen("game");
     nextRetryQuestion();
@@ -313,9 +394,10 @@
       state.retry.completed + 1,
       state.retry.total,
       state.retry.earnedStars,
-      `Retry: ${RocketMath.questions.getGroup(state.retry.groupName).name}`,
+      `Review: ${RocketMath.questions.getGroup(state.retry.groupName).name}`,
       state.config,
-      true
+      true,
+      getHudState()
     );
     RocketMath.animation.setRocketState(RocketMath.ui.elements.rocket, "idle");
   }
@@ -334,21 +416,18 @@
       state.retry.sourceResult.retryStars += recorded.awarded;
       state.retry.completed += 1;
       RocketMath.ui.updateScore(state.retry.earnedStars);
-      RocketMath.animation.moveRocket(
-        RocketMath.ui.elements.rocket,
-        state.retry.completed / state.retry.total
-      );
+      RocketMath.animation.moveRocket(RocketMath.ui.elements.rocket, state.retry.completed / state.retry.total);
       RocketMath.animation.setRocketState(RocketMath.ui.elements.rocket, "correct");
       RocketMath.audio.play("correct");
       RocketMath.audio.play("boost");
-      RocketMath.ui.showMessage(`Fixed it! +${recorded.awarded} bonus stars.`);
+      RocketMath.ui.showMessage(`Fixed it! +${recorded.awarded} star.`);
     } else {
       state.retry.queue.push(item);
       RocketMath.animation.setRocketState(RocketMath.ui.elements.rocket, "wrong");
       RocketMath.audio.play("wrong");
-      RocketMath.ui.showMessage(`Almost! The answer is ${state.currentQuestion.answer}. This one will come back.`);
+      RocketMath.ui.showHint(state.currentQuestion.hint);
+      RocketMath.ui.showMessage("Almost! Try the make-ten step, then this one will return.");
     }
-
     window.setTimeout(nextRetryQuestion, RULES.answerDelayMs);
   }
 
@@ -368,12 +447,12 @@
         state.competition.comparison,
         state.progress,
         state.competition,
-        `Great comeback, ${RocketMath.questions.getGroup(completedRetry.groupName).name}! +${completedRetry.earnedStars} retry stars.`
+        `Great comeback, ${RocketMath.questions.getGroup(completedRetry.groupName).name}! +${completedRetry.earnedStars} review stars.`
       );
     } else {
       RocketMath.ui.renderResult(completedRetry.sourceResult, state.progress, completedRetry.sourceResult.previous, {
-        title: "Retry mission complete! 🌟",
-        message: `Great comeback! You earned ${completedRetry.earnedStars} retry stars.`
+        title: "Review complete! 🌟",
+        message: `Great comeback! You earned ${completedRetry.earnedStars} review stars.`
       });
     }
     state.retry = null;
@@ -383,11 +462,18 @@
     if (state.currentQuestion) RocketMath.ui.showHint(state.currentQuestion.hint);
   }
 
+  function saveConfig(config) {
+    state.progress = RocketMath.storage.recordConfig(state.progress, config);
+    RocketMath.ui.renderProgress(state.progress);
+  }
+
   function resetProgress() {
     state.progress = RocketMath.storage.resetProgress();
     state.lastResult = null;
     state.competition = null;
+    RocketMath.ui.applyConfigs(state.progress.configs);
     RocketMath.ui.renderProgress(state.progress);
+    RocketMath.ui.updateCompetitionSummaries();
   }
 
   function showStart() {
@@ -406,8 +492,8 @@
   function startTimer() {
     stopTimer();
     state.startTime = Date.now();
-    state.timerId = window.setInterval(updateTimer, 1000);
-    updateTimer();
+    state.timerId = window.setInterval(() => RocketMath.ui.updateTimer(getElapsedSeconds()), 1000);
+    RocketMath.ui.updateTimer(0);
   }
 
   function stopTimer() {
@@ -415,30 +501,39 @@
     state.timerId = null;
   }
 
-  function updateTimer() {
-    RocketMath.ui.updateTimer(getElapsedSeconds());
-  }
-
   function getElapsedSeconds() {
     return state.startTime ? Math.floor((Date.now() - state.startTime) / 1000) : 0;
   }
 
   function getResultMessage(correctCount) {
-    if (correctCount === RULES.totalQuestions) {
-      return "Perfect flight! You reached the brightest star.";
-    }
-    if (correctCount >= 8) {
-      return "Strong mission! Your maths rocket is flying high.";
-    }
-    if (correctCount >= 5) {
-      return "Nice effort! A retry mission can earn more stars.";
-    }
-    return "Keep going—you are building your math power!";
+    if (correctCount === RULES.totalQuestions) return "Perfect flight! Your number skills are shining.";
+    if (correctCount >= 8) return "Strong mission! Your math rocket is flying high.";
+    if (correctCount >= 5) return "Nice thinking! Review the tricky ones for more stars.";
+    return "Every mission builds math power — let’s review together!";
   }
 
   function getMissionLabel() {
     const group = RocketMath.questions.getGroup(state.config.groupName).name;
     return `${state.mode === "competition" ? "Competition" : "Practice"}: ${group}`;
+  }
+
+  function getHudState() {
+    const activeGroup = state.retry ? state.retry.groupName : (state.config && state.config.groupName);
+    const activeStars = state.retry ? state.retry.earnedStars : state.sessionStars;
+    const cxyStars = state.competition && state.competition.cxy
+      ? state.competition.cxy.baseStars
+      : (state.mode === "competition" && activeGroup === "cxy" ? activeStars : 0);
+    const challengerStars = state.competition && state.competition.challenger
+      ? state.competition.challenger.baseStars
+      : (state.mode === "competition" && activeGroup === "challenger" ? activeStars : 0);
+    return {
+      mode: state.mode,
+      isRetry: state.phase === "retry",
+      activeGroup,
+      currentStreak: state.currentStreak,
+      cxyStars,
+      challengerStars
+    };
   }
 
   function copyQuestion(question) {
@@ -449,6 +544,10 @@
       intermediateResults: [...question.intermediateResults],
       choices: [...question.choices]
     };
+  }
+
+  function randomIndex(items) {
+    return RocketMath.utils.randomNumber(0, items.length - 1);
   }
 
   function createId(prefix) {
@@ -464,9 +563,11 @@
     startRetry,
     answer,
     showHint,
+    saveConfig,
     resetProgress,
     showStart,
-    compareCompetition
+    compareCompetition,
+    computeRewards
   };
 
   window.RocketMath = RocketMath;

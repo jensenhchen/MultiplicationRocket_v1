@@ -3,17 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="A cheerful offline math game for children practising addition, subtraction, multiplication, and division.">
+  <meta name="description" content="A cheerful offline math game for building confidence with make-ten and break-ten mental maths.">
   <meta name="theme-color" content="#4da3ff">
   <meta name="color-scheme" content="light">
-
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Math Rocket">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="format-detection" content="telephone=no">
 
-  <title>Math Rocket: + - * /</title>
+  <title>Math Rocket</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/favicon.png">
@@ -24,10 +23,13 @@
 <body>
   <main class="game-shell" id="app">
     <header class="hero">
-      <div class="rocket-badge" aria-hidden="true">&#128640;</div>
+      <div class="rocket-badge" aria-hidden="true">🚀</div>
       <div class="hero-copy">
-        <h1>Math Rocket: + - * /</h1>
-        <p>Practice the four basic operations: addition, subtraction, multiplication, and division.</p>
+        <h1>
+          <span>Math Rocket:</span>
+          <img class="operator-title-image" src="./assets/images/math-operators.png" alt="plus, minus, multiply and divide">
+        </h1>
+        <p>Practice addition, subtraction, multiplication and division.</p>
       </div>
       <div class="hero-controls" aria-label="Sound controls">
         <button id="sound-toggle" class="icon-toggle" type="button" aria-pressed="true">Sound On</button>
@@ -35,186 +37,312 @@
       </div>
     </header>
 
-    <section id="start-screen" class="panel" aria-labelledby="start-title">
-      <div class="screen-heading">
-        <div>
-          <p class="eyebrow">Practice</p>
-          <h2 id="start-title">Choose your rocket mission</h2>
-          <p id="saved-progress" class="saved-progress" aria-live="polite">Loading saved progress...</p>
+    <section id="start-screen" class="panel start-panel" aria-labelledby="start-title">
+      <div class="setup-bar">
+        <div class="page-intro">
+          <p class="eyebrow">Choose a mission</p>
+          <h2 id="start-title">Practice, improve and race together</h2>
         </div>
-        <button id="reset-progress-button" class="text-button" type="button">Reset progress</button>
       </div>
 
-      <div class="group-board">
-        <article class="mission-group" aria-labelledby="cxy-title">
-          <div class="group-heading">
-            <span class="group-number">Group 1</span>
-            <h3 id="cxy-title">CXY</h3>
-          </div>
-          <p>A friendly place to build speed and confidence.</p>
-          <div class="mission-options">
-            <label for="cxy-operations">
-              <span>Operations</span>
-              <select id="cxy-operations" data-config-group="cxy" data-config-field="operationSet">
-                <option value="add-sub" selected>Addition &amp; Subtraction</option>
-                <option value="mul-div">Multiplication &amp; Division</option>
-                <option value="all">All Four Operations</option>
-              </select>
-            </label>
-            <label for="cxy-difficulty">
-              <span>Difficulty</span>
-              <select id="cxy-difficulty" data-config-group="cxy" data-config-field="difficulty">
-                <option value="easy">Easy — 2 numbers</option>
-                <option value="medium" selected>Medium — 3 numbers</option>
-                <option value="hard">Hard — 4 numbers</option>
-              </select>
-            </label>
-            <label for="cxy-range">
-              <span>Number Range</span>
-              <select id="cxy-range" data-config-group="cxy" data-config-field="rangeMax">
-                <option value="10" selected>1–10</option>
-                <option value="15">1–15</option>
-                <option value="20">1–20</option>
-              </select>
-            </label>
-          </div>
-          <button class="start-practice-button" type="button" data-group="cxy">Start CXY</button>
-        </article>
-
-        <article class="mission-group challenger-group" aria-labelledby="challenger-title">
-          <div class="group-heading">
-            <span class="group-number">Group 2</span>
-            <h3 id="challenger-title">Challenger</h3>
-          </div>
-          <p>Bigger numbers for a bold rocket challenge.</p>
-          <div class="mission-options">
-            <label for="challenger-operations">
-              <span>Operations</span>
-              <select id="challenger-operations" data-config-group="challenger" data-config-field="operationSet">
-                <option value="add-sub" selected>Addition &amp; Subtraction</option>
-                <option value="mul-div">Multiplication &amp; Division</option>
-                <option value="all">All Four Operations</option>
-              </select>
-            </label>
-            <label for="challenger-difficulty">
-              <span>Difficulty</span>
-              <select id="challenger-difficulty" data-config-group="challenger" data-config-field="difficulty">
-                <option value="easy">Easy — 2 numbers</option>
-                <option value="medium" selected>Medium — 3 numbers</option>
-                <option value="hard">Hard — 4 numbers</option>
-              </select>
-            </label>
-            <label for="challenger-range">
-              <span>Number Range</span>
-              <select id="challenger-range" data-config-group="challenger" data-config-field="rangeMax">
-                <option value="15" selected>1–15</option>
-                <option value="25">1–25</option>
-                <option value="30">1–30</option>
-              </select>
-            </label>
-          </div>
-          <button class="start-practice-button challenger-button" type="button" data-group="challenger">Start Challenger</button>
-        </article>
-      </div>
-
-      <section class="competition-panel" aria-labelledby="competition-title">
-        <div class="competition-heading">
+      <section id="progress-dashboard" class="progress-dashboard" aria-labelledby="progress-dashboard-title">
+        <div class="section-heading progress-heading">
           <div>
-            <p class="eyebrow">Two-player mission</p>
-            <h3 id="competition-title">CXY vs Challenger Competition</h3>
-            <p>CXY flies first, then Challenger. Accuracy wins; speed breaks a tie.</p>
+            <p class="eyebrow">Last 3 days</p>
+            <h2 id="progress-dashboard-title">Learning Progress</h2>
           </div>
-          <span class="trophy" aria-hidden="true">&#127942;</span>
+          <p>Question bars show practice volume. The curve shows accuracy.</p>
         </div>
-        <p class="competition-note">Competition uses each group’s Practice settings above.</p>
-        <div class="competition-configs" aria-live="polite">
-          <div><strong>CXY</strong><span id="competition-cxy-summary"></span></div>
-          <div><strong>Challenger</strong><span id="competition-challenger-summary"></span></div>
-        </div>
-        <button id="start-competition-button" class="competition-card" type="button">Start Competition</button>
+        <div id="progress-cards" class="progress-cards" aria-live="polite"></div>
       </section>
 
-      <div id="group-stats" class="group-stats" aria-live="polite"></div>
-      <div id="focus-area" class="weak-tables" aria-live="polite"></div>
-    </section>
-
-    <section id="game-screen" class="panel hidden" aria-labelledby="question-text">
-      <div class="stats" aria-label="Game progress">
-        <div><span>Mission</span><strong id="mission-label">CXY</strong></div>
-        <div><span>Question</span><strong><span id="question-number">1</span>/<span id="question-total">10</span></strong></div>
-        <div><span>Stars</span><strong id="score">0</strong></div>
-        <div><span>Time</span><strong><span id="timer">0</span>s</strong></div>
-      </div>
-      <p id="mission-config" class="mission-config"></p>
-
-      <div class="rocket-area" aria-hidden="true">
-        <div class="cloud cloud-one"></div>
-        <div class="cloud cloud-two"></div>
-        <div class="sky-mark star-one">&#9733;</div>
-        <div class="sky-mark star-two">&#9733;</div>
-        <div class="sky-mark star-three">&#9733;</div>
-        <div id="rocket" class="rocket-wrap">
-          <svg class="rocket-svg" viewBox="0 0 120 180" role="img" aria-label="Rocket">
-            <g class="rocket-glow"><ellipse cx="60" cy="92" rx="34" ry="66"></ellipse></g>
-            <g class="rocket-body">
-              <path class="fin left-fin" d="M39 116 L15 152 L45 142 Z"></path>
-              <path class="fin right-fin" d="M81 116 L105 152 L75 142 Z"></path>
-              <path class="body-shell" d="M60 8 C30 33 25 85 39 129 C44 145 76 145 81 129 C95 85 90 33 60 8 Z"></path>
-              <circle class="window-ring" cx="60" cy="66" r="18"></circle>
-              <circle class="window-glass" cx="60" cy="66" r="11"></circle>
-              <path class="smile" d="M51 99 Q60 108 69 99"></path>
-              <path class="oops-mouth" d="M53 104 Q60 96 67 104"></path>
-            </g>
-            <g class="flame">
-              <path class="flame-outer" d="M43 139 C45 162 58 174 60 178 C62 174 75 162 77 139 Z"></path>
-              <path class="flame-inner" d="M53 140 C54 156 60 165 60 168 C60 165 66 156 67 140 Z"></path>
-            </g>
-            <g class="smoke-trail">
-              <circle cx="42" cy="160" r="9"></circle>
-              <circle cx="60" cy="166" r="12"></circle>
-              <circle cx="78" cy="160" r="8"></circle>
-            </g>
-            <g class="sparkles">
-              <circle cx="23" cy="70" r="3"></circle>
-              <circle cx="98" cy="92" r="3"></circle>
-              <circle cx="31" cy="121" r="2.5"></circle>
-              <circle cx="92" cy="34" r="2.5"></circle>
-            </g>
-          </svg>
-          <span class="oops-bubble">Try again!</span>
+      <section id="practice-setup" class="setup-section practice-section" aria-labelledby="practice-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Build confidence</p>
+            <h2 id="practice-title">Practice</h2>
+          </div>
+          <p>Choose one pilot for a 10-question mission.</p>
         </div>
-        <div class="moon" aria-hidden="true"></div>
-        <div class="fireworks" aria-hidden="true"><span></span><span></span><span></span></div>
-      </div>
 
-      <h2 id="question-text" class="question"></h2>
-      <div id="answer-buttons" class="answer-grid" aria-label="Answer choices"></div>
-      <p class="keyboard-tip">Tip: press 1, 2, 3, or 4 to choose an answer.</p>
-      <button id="hint-button" class="secondary-button" type="button">Show hint</button>
-      <p id="hint-text" class="hint" aria-live="polite"></p>
-      <p id="message" class="message" aria-live="assertive"></p>
+        <div class="group-board">
+          <article class="mission-group" aria-labelledby="cxy-title">
+            <div class="group-heading">
+              <span class="group-number">Group 1</span>
+              <h3 id="cxy-title">CXY</h3>
+              <span class="strategy-chip">Make 10</span>
+            </div>
+            <div class="mission-options">
+              <label for="cxy-operations">
+                <span>Operations</span>
+                <select id="cxy-operations" data-config-context="practice" data-config-group="cxy" data-config-field="operationSet">
+                  <option value="add-sub" selected>Addition &amp; Subtraction</option>
+                  <option value="mul-div">Multiplication &amp; Division</option>
+                  <option value="all">All Four Operations</option>
+                </select>
+              </label>
+              <label for="cxy-difficulty">
+                <span>Difficulty</span>
+                <select id="cxy-difficulty" data-config-context="practice" data-config-group="cxy" data-config-field="difficulty">
+                  <option value="easy" selected>Easy · 2 numbers</option>
+                  <option value="medium">Medium · 3 numbers</option>
+                  <option value="hard">Hard · 4 numbers</option>
+                </select>
+              </label>
+              <label for="cxy-range">
+                <span>Number range</span>
+                <select id="cxy-range" data-config-context="practice" data-config-group="cxy" data-config-field="rangeMax">
+                  <option value="10" selected>1–10</option>
+                  <option value="15">1–15</option>
+                  <option value="20">1–20</option>
+                </select>
+              </label>
+            </div>
+            <button class="start-practice-button" type="button" data-group="cxy">Start CXY Practice</button>
+          </article>
+
+          <article class="mission-group challenger-group" aria-labelledby="challenger-title">
+            <div class="group-heading">
+              <span class="group-number">Group 2</span>
+              <h3 id="challenger-title">Challenger</h3>
+              <span class="strategy-chip">Parent</span>
+            </div>
+            <div class="mission-options">
+              <label for="challenger-operations">
+                <span>Operations</span>
+                <select id="challenger-operations" data-config-context="practice" data-config-group="challenger" data-config-field="operationSet">
+                  <option value="add-sub" selected>Addition &amp; Subtraction</option>
+                  <option value="mul-div">Multiplication &amp; Division</option>
+                  <option value="all">All Four Operations</option>
+                </select>
+              </label>
+              <label for="challenger-difficulty">
+                <span>Difficulty</span>
+                <select id="challenger-difficulty" data-config-context="practice" data-config-group="challenger" data-config-field="difficulty">
+                  <option value="easy">Easy · 2 numbers</option>
+                  <option value="medium" selected>Medium · 3 numbers</option>
+                  <option value="hard">Hard · 4 numbers</option>
+                </select>
+              </label>
+              <label for="challenger-range">
+                <span>Number range</span>
+                <select id="challenger-range" data-config-context="practice" data-config-group="challenger" data-config-field="rangeMax">
+                  <option value="15">1–15</option>
+                  <option value="25" selected>1–25</option>
+                  <option value="30">1–30</option>
+                </select>
+              </label>
+            </div>
+            <button class="start-practice-button challenger-button" type="button" data-group="challenger">Start Challenger Practice</button>
+          </article>
+        </div>
+
+        <div id="group-stats" class="group-stats" aria-live="polite"></div>
+        <div id="focus-area" class="sr-only" aria-live="polite"></div>
+      </section>
+
+      <section id="competition-setup" class="setup-section competition-setup" aria-labelledby="competition-title">
+        <div class="section-heading competition-heading">
+          <div>
+            <p class="eyebrow">Family challenge</p>
+            <h2 id="competition-title">Competition</h2>
+          </div>
+          <p>CXY flies first, then Challenger. Each pilot gets 10 questions.</p>
+        </div>
+
+        <div class="group-board competition-board">
+          <article class="mission-group competition-group" aria-labelledby="competition-cxy-title">
+            <div class="group-heading">
+              <span class="group-number">First pilot</span>
+              <h3 id="competition-cxy-title">CXY</h3>
+              <span class="strategy-chip">Make 10</span>
+            </div>
+            <div class="mission-options">
+              <label for="competition-cxy-operations">
+                <span>Operations</span>
+                <select id="competition-cxy-operations" data-config-context="competition" data-config-group="cxy" data-config-field="operationSet">
+                  <option value="add-sub" selected>Addition &amp; Subtraction</option>
+                  <option value="mul-div">Multiplication &amp; Division</option>
+                  <option value="all">All Four Operations</option>
+                </select>
+              </label>
+              <label for="competition-cxy-difficulty">
+                <span>Difficulty</span>
+                <select id="competition-cxy-difficulty" data-config-context="competition" data-config-group="cxy" data-config-field="difficulty">
+                  <option value="easy" selected>Easy · 2 numbers</option>
+                  <option value="medium">Medium · 3 numbers</option>
+                  <option value="hard">Hard · 4 numbers</option>
+                </select>
+              </label>
+              <label for="competition-cxy-range">
+                <span>Number range</span>
+                <select id="competition-cxy-range" data-config-context="competition" data-config-group="cxy" data-config-field="rangeMax">
+                  <option value="10" selected>1–10</option>
+                  <option value="15">1–15</option>
+                  <option value="20">1–20</option>
+                </select>
+              </label>
+            </div>
+            <p id="competition-cxy-summary" class="config-summary"></p>
+          </article>
+
+          <article class="mission-group challenger-group competition-group" aria-labelledby="competition-challenger-title">
+            <div class="group-heading">
+              <span class="group-number">Second pilot</span>
+              <h3 id="competition-challenger-title">Challenger</h3>
+              <span class="strategy-chip">Parent</span>
+            </div>
+            <div class="mission-options">
+              <label for="competition-challenger-operations">
+                <span>Operations</span>
+                <select id="competition-challenger-operations" data-config-context="competition" data-config-group="challenger" data-config-field="operationSet">
+                  <option value="add-sub" selected>Addition &amp; Subtraction</option>
+                  <option value="mul-div">Multiplication &amp; Division</option>
+                  <option value="all">All Four Operations</option>
+                </select>
+              </label>
+              <label for="competition-challenger-difficulty">
+                <span>Difficulty</span>
+                <select id="competition-challenger-difficulty" data-config-context="competition" data-config-group="challenger" data-config-field="difficulty">
+                  <option value="easy">Easy · 2 numbers</option>
+                  <option value="medium" selected>Medium · 3 numbers</option>
+                  <option value="hard">Hard · 4 numbers</option>
+                </select>
+              </label>
+              <label for="competition-challenger-range">
+                <span>Number range</span>
+                <select id="competition-challenger-range" data-config-context="competition" data-config-group="challenger" data-config-field="rangeMax">
+                  <option value="15">1–15</option>
+                  <option value="25" selected>1–25</option>
+                  <option value="30">1–30</option>
+                </select>
+              </label>
+            </div>
+            <p id="competition-challenger-summary" class="config-summary"></p>
+          </article>
+        </div>
+
+        <div class="competition-actions">
+          <button id="start-competition-button" class="competition-card" type="button">Start Competition</button>
+          <p class="competition-tip">Accuracy comes first. Speed only helps when accuracy stays strong.</p>
+        </div>
+      </section>
     </section>
 
-    <section id="result-screen" class="panel hidden" aria-labelledby="result-title">
-      <h2 id="result-title">Mission complete! &#11088;</h2>
-      <p id="result-message" class="result-message" aria-live="polite"></p>
-      <div class="result-stats">
-        <div><span>Mission stars</span><strong id="final-score"></strong></div>
-        <div><span>Total stars</span><strong id="total-stars"></strong></div>
-        <div><span>Correct</span><strong id="final-correct"></strong></div>
-        <div><span>Accuracy</span><strong id="final-rate"></strong></div>
-        <div><span>Time</span><strong><span id="final-time"></span>s</strong></div>
+    <section id="game-screen" class="panel game-panel hidden" aria-labelledby="question-text">
+      <div class="play-hud" aria-label="Mission progress">
+        <div class="pilot-chip">
+          <span>Pilot</span>
+          <strong id="mission-label">CXY</strong>
+        </div>
+        <div class="progress-cluster">
+          <div class="progress-copy">
+            <strong><span id="question-number">1</span>/<span id="question-total">10</span></strong>
+            <span id="mission-config"></span>
+          </div>
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="10" aria-valuenow="1">
+            <span id="question-progress"></span>
+          </div>
+        </div>
+        <div class="star-score"><span>⭐</span><strong id="score">0</strong></div>
+        <div class="streak-score"><span>Streak</span><strong id="streak">0</strong></div>
       </div>
 
+      <div id="competition-hud" class="competition-hud hidden" aria-live="polite">
+        <span data-live-player="cxy">CXY <strong id="live-cxy-stars">0</strong>⭐</span>
+        <b>VS</b>
+        <span data-live-player="challenger">Challenger <strong id="live-challenger-stars">0</strong>⭐</span>
+      </div>
+      <span id="timer" class="sr-only">0</span>
+
+      <div class="play-stage">
+        <div class="rocket-area" aria-hidden="true">
+          <div class="cloud cloud-one"></div>
+          <div class="cloud cloud-two"></div>
+          <div class="sky-mark star-one">★</div>
+          <div class="sky-mark star-two">★</div>
+          <div id="rocket" class="rocket-wrap">
+            <svg class="rocket-svg" viewBox="0 0 120 180" role="img" aria-label="Rocket">
+              <g class="rocket-glow"><ellipse cx="60" cy="92" rx="34" ry="66"></ellipse></g>
+              <g class="rocket-body">
+                <path class="fin left-fin" d="M39 116 L15 152 L45 142 Z"></path>
+                <path class="fin right-fin" d="M81 116 L105 152 L75 142 Z"></path>
+                <path class="body-shell" d="M60 8 C30 33 25 85 39 129 C44 145 76 145 81 129 C95 85 90 33 60 8 Z"></path>
+                <circle class="window-ring" cx="60" cy="66" r="18"></circle>
+                <circle class="window-glass" cx="60" cy="66" r="11"></circle>
+                <path class="smile" d="M51 99 Q60 108 69 99"></path>
+                <path class="oops-mouth" d="M53 104 Q60 96 67 104"></path>
+              </g>
+              <g class="flame">
+                <path class="flame-outer" d="M43 139 C45 162 58 174 60 178 C62 174 75 162 77 139 Z"></path>
+                <path class="flame-inner" d="M53 140 C54 156 60 165 60 168 C60 165 66 156 67 140 Z"></path>
+              </g>
+              <g class="smoke-trail">
+                <circle cx="42" cy="160" r="9"></circle>
+                <circle cx="60" cy="166" r="12"></circle>
+                <circle cx="78" cy="160" r="8"></circle>
+              </g>
+              <g class="sparkles">
+                <circle cx="23" cy="70" r="3"></circle>
+                <circle cx="98" cy="92" r="3"></circle>
+              </g>
+            </svg>
+            <span class="oops-bubble">Try again!</span>
+          </div>
+          <div class="moon"></div>
+          <div class="fireworks"><span></span><span></span><span></span></div>
+        </div>
+
+        <div class="question-zone">
+          <h2 id="question-text" class="question"></h2>
+          <div id="answer-buttons" class="answer-grid" aria-label="Answer choices"></div>
+        </div>
+      </div>
+
+      <div class="support-row">
+        <button id="hint-button" class="secondary-button" type="button">💡 Hint</button>
+        <div class="feedback-zone">
+          <p id="hint-text" class="hint" aria-live="polite"></p>
+          <p id="message" class="message" aria-live="assertive"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="result-screen" class="panel result-panel hidden" aria-labelledby="result-title">
+      <div class="result-heading">
+        <div id="result-celebration-icon" class="result-celebration-icon" aria-hidden="true">⭐</div>
+        <div>
+          <p class="eyebrow">Mission report</p>
+          <h2 id="result-title">Mission complete! ⭐</h2>
+          <p id="result-message" class="result-message" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="result-stats">
+        <div class="result-star"><span>Mission stars</span><strong id="final-score">0</strong></div>
+        <div><span>Correct</span><strong id="final-correct">0/10</strong></div>
+        <div><span>Accuracy</span><strong id="final-rate">0%</strong></div>
+        <div><span>Average</span><strong><span id="final-average">0</span>s</strong></div>
+      </div>
+      <span class="sr-only">Total time <span id="final-time">0</span> seconds</span>
+
+      <div id="reward-breakdown" class="reward-breakdown" aria-label="Star rewards"></div>
       <div id="comparison-message" class="comparison-message" aria-live="polite"></div>
       <div id="competition-result" class="competition-result hidden"></div>
+
       <section id="review-section" class="review-section" aria-labelledby="review-title">
-        <h3 id="review-title">Mission review</h3>
-        <div id="wrong-review" class="review-list"></div>
+        <div>
+          <h3 id="review-title">Mistake review</h3>
+          <p id="review-summary">Your tricky questions are ready to practise one at a time.</p>
+        </div>
+        <div id="wrong-review" class="sr-only"></div>
         <div id="retry-actions" class="retry-actions"></div>
       </section>
-      <button id="competition-next-button" class="hidden" type="button">Start Challenger turn</button>
-      <button id="play-again-button" type="button">Back to missions</button>
+
+      <div class="result-actions">
+        <button id="competition-next-button" class="hidden" type="button">Start Challenger turn</button>
+        <button id="play-again-button" type="button">Back to missions</button>
+      </div>
     </section>
   </main>
 

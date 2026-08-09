@@ -7,6 +7,8 @@
   const HISTORY_LIMIT = 60;
   const COMPETITION_LIMIT = 24;
   const WRONG_QUESTION_LIMIT = 60;
+  let pendingServerProgress = null;
+  let serverSaveTimer = null;
 
   function createEmptyStats() {
     return {
@@ -26,9 +28,13 @@
 
   function createDefaultProgress() {
     return {
-      version: 2,
+      version: 3,
       totalStars: 0,
       groupStars: { cxy: 0, challenger: 0 },
+      configs: {
+        cxy: { groupName: "cxy", operationSet: "add-sub", difficulty: "easy", rangeMax: 10 },
+        challenger: { groupName: "challenger", operationSet: "add-sub", difficulty: "medium", rangeMax: 25 }
+      },
       bestScore: 0,
       groupStats: { cxy: createEmptyStats(), challenger: createEmptyStats() },
       practiceHistory: [],
@@ -52,7 +58,7 @@
       const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
       if (legacy) {
         const migrated = migrateLegacyProgress(JSON.parse(legacy));
-        saveProgress(migrated);
+        saveLocalProgress(migrated);
         return migrated;
       }
     } catch (error) {
@@ -64,12 +70,70 @@
 
   function saveProgress(progress) {
     const normalized = normalizeProgress(progress);
+    saveLocalProgress(normalized);
+    scheduleServerSave(normalized);
+    return normalized;
+  }
+
+  function saveLocalProgress(progress) {
+    const normalized = normalizeProgress(progress);
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
     } catch (error) {
       // Private browsing or full storage should not stop the child from playing.
     }
     return normalized;
+  }
+
+  async function loadServerProgress(fallbackProgress) {
+    const fallback = normalizeProgress(fallbackProgress);
+    if (typeof window.fetch !== "function" || !/^https?:$/.test(window.location.protocol)) return fallback;
+
+    const response = await window.fetch("./api/progress", {
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (response.status === 204) {
+      await saveProgressToServer(fallback);
+      return fallback;
+    }
+    if (!response.ok) throw new Error(`Progress server returned ${response.status}.`);
+    const remote = normalizeProgress(await response.json());
+    return saveLocalProgress(remote);
+  }
+
+  function scheduleServerSave(progress) {
+    if (typeof window.fetch !== "function" || !/^https?:$/.test(window.location.protocol)) return;
+    pendingServerProgress = normalizeProgress(progress);
+    if (serverSaveTimer) window.clearTimeout(serverSaveTimer);
+    serverSaveTimer = window.setTimeout(() => {
+      const queued = pendingServerProgress;
+      pendingServerProgress = null;
+      serverSaveTimer = null;
+      saveProgressToServer(queued).catch(() => {
+        // Local storage remains the offline fallback when the server is unavailable.
+      });
+    }, 180);
+  }
+
+  async function saveProgressToServer(progress) {
+    if (!progress || typeof window.fetch !== "function") return false;
+    const response = await window.fetch("./api/progress", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(normalizeProgress(progress))
+    });
+    if (!response.ok) throw new Error(`Progress server returned ${response.status}.`);
+    return true;
+  }
+
+  async function flushServerSave() {
+    if (!pendingServerProgress) return true;
+    if (serverSaveTimer) window.clearTimeout(serverSaveTimer);
+    const queued = pendingServerProgress;
+    pendingServerProgress = null;
+    serverSaveTimer = null;
+    return saveProgressToServer(queued);
   }
 
   function resetProgress() {
@@ -172,6 +236,13 @@
     return progress;
   }
 
+  function recordConfig(currentProgress, config) {
+    const progress = normalizeProgress(currentProgress);
+    const groupName = normalizeGroupName(config && config.groupName);
+    progress.configs[groupName] = normalizeConfig(config, groupName);
+    return saveProgress(progress);
+  }
+
   function updateGroupStats(progress, result) {
     const groupName = normalizeGroupName(result.groupName);
     const stats = progress.groupStats[groupName] || createEmptyStats();
@@ -202,6 +273,10 @@
       totalQuestions: Number(result.totalQuestions) || 10,
       correctionRate: Number(result.correctionRate) || 0,
       elapsedSeconds: Number(result.elapsedSeconds) || 0,
+      averageCorrectSeconds: Number(result.averageCorrectSeconds) || 0,
+      maxStreak: Math.max(0, Number(result.maxStreak) || 0),
+      difficultyMultiplier: Math.max(1, Number(result.difficultyMultiplier) || 1),
+      rewards: normalizeRewards(result.rewards),
       baseStars: Number(result.baseStars) || 0,
       retryStars: Number(result.retryStars) || 0,
       playedAt: result.playedAt || ""
@@ -264,7 +339,7 @@
     const sourceGroupStars = source.groupStars && typeof source.groupStars === "object" ? source.groupStars : {};
 
     return {
-      version: 2,
+      version: 3,
       totalStars: Math.max(0, Number(source.totalStars != null ? source.totalStars : source.starsEarned) || 0),
       groupStars: {
         cxy: Math.max(0, Number(sourceGroupStars.cxy) || 0),
@@ -274,6 +349,10 @@
       groupStats: {
         cxy: { ...createEmptyStats(), ...(oldGroups.cxy || {}) },
         challenger: { ...createEmptyStats(), ...challengerStats }
+      },
+      configs: {
+        cxy: normalizeConfig(source.configs && source.configs.cxy, "cxy"),
+        challenger: normalizeConfig(source.configs && (source.configs.challenger || source.configs.cxr), "challenger")
       },
       practiceHistory: normalizeArray(source.practiceHistory, HISTORY_LIMIT),
       competitionTurnHistory: normalizeArray(source.competitionTurnHistory, HISTORY_LIMIT),
@@ -298,7 +377,7 @@
 
   function migrateLegacyProgress(legacy) {
     const migrated = normalizeProgress(legacy);
-    migrated.version = 2;
+    migrated.version = 3;
     migrated.wrongQuestions = migrated.wrongQuestions.map((item, index) => ({
       ...item,
       id: item.id || `legacy-${index}-${item.playedAt || "unknown"}`,
@@ -312,6 +391,38 @@
     return groupName === "challenger" || groupName === "cxr" ? "challenger" : "cxy";
   }
 
+  function normalizeConfig(config, groupName) {
+    const source = config && typeof config === "object" ? config : {};
+    const normalizedGroup = normalizeGroupName(groupName || source.groupName);
+    const validDifficulties = ["easy", "medium", "hard"];
+    const validOperations = ["add-sub", "mul-div", "all"];
+    const ranges = normalizedGroup === "challenger" ? [15, 25, 30] : [10, 15, 20];
+    const defaultDifficulty = normalizedGroup === "challenger" ? "medium" : "easy";
+    const defaultRange = normalizedGroup === "challenger" ? 25 : 10;
+    const rangeMax = Number(source.rangeMax);
+
+    return {
+      groupName: normalizedGroup,
+      operationSet: validOperations.includes(source.operationSet) ? source.operationSet : "add-sub",
+      difficulty: validDifficulties.includes(source.difficulty) ? source.difficulty : defaultDifficulty,
+      rangeMax: ranges.includes(rangeMax) ? rangeMax : defaultRange
+    };
+  }
+
+  function normalizeRewards(rewards) {
+    const source = rewards && typeof rewards === "object" ? rewards : {};
+    return {
+      completion: Math.max(0, Number(source.completion) || 0),
+      correct: Math.max(0, Number(source.correct) || 0),
+      accuracy: Math.max(0, Number(source.accuracy) || 0),
+      accuracyImprovement: Math.max(0, Number(source.accuracyImprovement) || 0),
+      speedImprovement: Math.max(0, Number(source.speedImprovement) || 0),
+      streak: Math.max(0, Number(source.streak) || 0),
+      difficulty: Math.max(0, Number(source.difficulty) || 0),
+      total: Math.max(0, Number(source.total) || 0)
+    };
+  }
+
   function normalizeArray(value, limit) {
     return Array.isArray(value) ? value.slice(0, limit) : [];
   }
@@ -321,13 +432,16 @@
     LEGACY_STORAGE_KEY,
     createDefaultProgress,
     loadProgress,
+    loadServerProgress,
     saveProgress,
+    flushServerSave,
     resetProgress,
     missionKey,
     getPreviousResult,
     recordGameResult,
     recordRetryBonus,
     recordCompetition,
+    recordConfig,
     getFocusAreas,
     normalizeProgress
   };

@@ -53,6 +53,7 @@ groups.forEach((groupName) => {
         const signatures = new Set(questions.map((question) => question.signature));
         const seenOperators = new Set(questions.flatMap((question) => question.operators));
         const expectedOperators = RocketMath.questions.OPERATION_SETS[operationSet].operators;
+        const resultLimit = RocketMath.questions.getResultLimit(config);
 
         assert.equal(questions.length, 10);
         assert.equal(signatures.size, 10, `duplicate question in ${JSON.stringify(config)}`);
@@ -83,7 +84,37 @@ groups.forEach((groupName) => {
             assert(current >= 0);
           });
           assert.equal(current, question.answer);
+          assert(question.intermediateResults.every((value) => value <= resultLimit));
+
+          question.operators.forEach((operator, operatorIndex) => {
+            if (operator !== "multiply" && operator !== "divide") return;
+            const expectedTable = RocketMath.questions.GENERATION_RULES
+              .multiplicationTables[groupName][difficulty];
+            assert(
+              expectedTable.includes(question.numbers[operatorIndex + 1]),
+              `age-inappropriate fact in ${question.text}`
+            );
+          });
         });
+
+        if (groupName === "cxy" && operationSet === "add-sub") {
+          const strategyQuestions = questions.filter((question) => (
+            question.strategy === "make-ten" || question.strategy === "break-ten"
+          ));
+          assert(strategyQuestions.length >= 6, `not enough make/break-ten work in ${JSON.stringify(config)}`);
+          strategyQuestions.forEach((question) => {
+            assert(
+              /Make|Break|Reach 10|Start at 10/.test(question.hint),
+              `missing ten strategy hint in ${question.text}`
+            );
+            if (difficulty !== "easy") {
+              const tenIsUsedFirst = question.strategy === "make-ten"
+                ? question.intermediateResults[0] === 10
+                : (question.numbers[0] === 10 || question.intermediateResults[0] === 10);
+              assert(tenIsUsedFirst, `first step should use ten in ${question.text}`);
+            }
+          });
+        }
       });
     });
   });
@@ -91,6 +122,9 @@ groups.forEach((groupName) => {
 
 const storage = RocketMath.storage;
 let progress = storage.createDefaultProgress();
+assert.equal(progress.configs.cxy.difficulty, "easy");
+assert.equal(progress.configs.challenger.rangeMax, 25);
+assert.equal(RocketMath.questions.normalizeOptions({ groupName: "cxy" }).difficulty, "easy");
 const result = {
   sessionId: "practice-one",
   mode: "practice",
@@ -128,6 +162,39 @@ retry = storage.recordRetryBonus(retry.progress, {
 });
 assert.equal(retry.awarded, 0, "retry stars must only be awarded once");
 
+const rewardResult = {
+  correctCount: 9,
+  correctionRate: 90,
+  averageCorrectSeconds: 5,
+  maxStreak: 5,
+  difficultyMultiplier: 1.3
+};
+const rewards = RocketMath.game.computeRewards(rewardResult, {
+  correctionRate: 80,
+  averageCorrectSeconds: 6
+});
+assert.deepEqual(JSON.parse(JSON.stringify(rewards)), {
+  completion: 2,
+  correct: 9,
+  accuracy: 2,
+  accuracyImprovement: 2,
+  speedImprovement: 1,
+  streak: 1,
+  difficulty: 3,
+  total: 20
+});
+const accuracyFirst = RocketMath.game.computeRewards({
+  ...rewardResult,
+  correctCount: 8,
+  correctionRate: 80,
+  averageCorrectSeconds: 4
+}, {
+  correctionRate: 90,
+  averageCorrectSeconds: 6
+});
+assert.equal(accuracyFirst.speedImprovement, 0, "speed bonus must not reward lower accuracy");
+assert(accuracyFirst.difficulty <= 8, "difficulty bonus must not exceed correct-answer stars");
+
 const draw = RocketMath.game.compareCompetition(
   { correctionRate: 80, elapsedSeconds: 30 },
   { correctionRate: 80, elapsedSeconds: 30 }
@@ -136,10 +203,25 @@ assert.equal(draw.winnerGroup, "draw");
 assert.equal(draw.bonuses.cxy, RocketMath.game.RULES.drawBonus);
 
 const challengerWin = RocketMath.game.compareCompetition(
-  { correctionRate: 90, elapsedSeconds: 40 },
-  { correctionRate: 90, elapsedSeconds: 35 }
+  { baseStars: 10, correctionRate: 90, elapsedSeconds: 40 },
+  { baseStars: 10, correctionRate: 90, elapsedSeconds: 35 }
 );
 assert.equal(challengerWin.winnerGroup, "challenger");
+
+const difficultyAdjustedWin = RocketMath.game.compareCompetition(
+  { baseStars: 15, correctionRate: 80, averageCorrectSeconds: 8 },
+  { baseStars: 14, correctionRate: 100, averageCorrectSeconds: 4 }
+);
+assert.equal(difficultyAdjustedWin.winnerGroup, "cxy", "difficulty-adjusted stars should decide first");
+
+progress = storage.recordConfig(recorded.progress, {
+  groupName: "cxy",
+  operationSet: "add-sub",
+  difficulty: "hard",
+  rangeMax: 20
+});
+assert.equal(progress.configs.cxy.difficulty, "hard");
+assert.equal(progress.configs.cxy.rangeMax, 20);
 
 memory.clear();
 localStorage.setItem(storage.LEGACY_STORAGE_KEY, JSON.stringify({

@@ -1,11 +1,11 @@
 {
-  "name": "Math Rocket: + - * /",
+  "name": "Math Rocket",
   "short_name": "Math Rocket",
-  "description": "A cheerful offline game for practising addition, subtraction, multiplication, and division.",
+  "description": "A cheerful offline mental-maths game that builds confidence with make-ten and break-ten strategies.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "theme_color": "#4da3ff",
   "background_color": "#ffffff",
   "icons": [
