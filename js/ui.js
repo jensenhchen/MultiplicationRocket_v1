@@ -63,7 +63,12 @@
     retryActions: document.querySelector("#retry-actions"),
     competitionNextButton: document.querySelector("#competition-next-button"),
     playAgainButton: document.querySelector("#play-again-button"),
-    resultHomeButton: document.querySelector("#result-home-button")
+    resultHomeButton: document.querySelector("#result-home-button"),
+    raceExitDialog: document.querySelector("#race-exit-dialog"),
+    raceExitStatus: document.querySelector("#race-exit-status"),
+    raceExitMessage: document.querySelector("#race-exit-message"),
+    continueRaceButton: document.querySelector("#continue-race-button"),
+    exitRaceButton: document.querySelector("#exit-race-button")
   };
 
   function showScreen(screenName) {
@@ -502,10 +507,12 @@
   }
 
   function updateAudioButtons(settings) {
-    elements.soundToggle.textContent = settings.soundEnabled ? "Sound On" : "Sound Off";
+    elements.soundToggle.querySelector("strong").textContent = settings.soundEnabled ? "On" : "Off";
     elements.soundToggle.setAttribute("aria-pressed", String(settings.soundEnabled));
-    elements.musicToggle.textContent = settings.musicEnabled ? "Music On" : "Music Off";
+    elements.soundToggle.setAttribute("aria-label", `Sound ${settings.soundEnabled ? "On" : "Off"}`);
+    elements.musicToggle.querySelector("strong").textContent = settings.musicEnabled ? "On" : "Off";
     elements.musicToggle.setAttribute("aria-pressed", String(settings.musicEnabled));
+    elements.musicToggle.setAttribute("aria-label", `Music ${settings.musicEnabled ? "On" : "Off"}`);
   }
 
   function renderResult(result, progress, previous, options) {
@@ -528,11 +535,15 @@
     elements.reviewSection.classList.remove("hidden");
     elements.retryActions.innerHTML = "";
     elements.reviewTitle.textContent = "Mistake review";
+    elements.playAgainButton.textContent = "Back to Mission";
+    elements.resultHomeButton.textContent = view.exitDestination === "home" ? "⌂ Continue to Home" : "⌂ Home";
 
     if (!result.wrongAnswers.length) {
-      elements.reviewSummary.textContent = "Perfect score — every answer was correct!";
+      elements.reviewSummary.textContent = result.partial
+        ? "No tricky answered questions to review yet. Return when you are ready for another mission."
+        : "Perfect score — every answer was correct!";
       elements.reviewSection.classList.add("perfect-review");
-      celebrate();
+      if (!result.partial) celebrate();
       return;
     }
 
@@ -548,6 +559,21 @@
       complete.textContent = `+${result.retryStars || 0} review ⭐`;
       elements.retryActions.appendChild(complete);
     }
+  }
+
+  function showRaceExitDialog(status) {
+    const current = status || {};
+    elements.raceExitStatus.textContent = `${current.groupLabel || "Current pilot"}: ${current.completed || 0}/${current.total || 10} answered · ${current.correct || 0} correct.`;
+    elements.raceExitMessage.textContent = `If you exit, ${current.groupLabel || "the current pilot"} gets 0 stars and ${current.otherLabel || "the other pilot"} gets 10 stars.`;
+    if (typeof elements.raceExitDialog.showModal === "function") elements.raceExitDialog.showModal();
+    else elements.raceExitDialog.setAttribute("open", "");
+    window.requestAnimationFrame(() => elements.continueRaceButton.focus());
+  }
+
+  function closeRaceExitDialog() {
+    if (!elements.raceExitDialog) return;
+    if (typeof elements.raceExitDialog.close === "function" && elements.raceExitDialog.open) elements.raceExitDialog.close();
+    else elements.raceExitDialog.removeAttribute("open");
   }
 
   function renderRewardBreakdown(rewards, retryStars, dailyGoalBonus) {
@@ -755,6 +781,8 @@
     showHint,
     showMessage,
     updateAudioButtons,
+    showRaceExitDialog,
+    closeRaceExitDialog,
     renderResult,
     renderCompetitionPrompt,
     renderCompetitionResult,

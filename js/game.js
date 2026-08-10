@@ -53,6 +53,10 @@
     wrongAnswers: [],
     startTime: 0,
     timerId: null,
+    transitionTimerId: null,
+    pausedElapsed: 0,
+    pausedTransitionPending: false,
+    pendingExitDestination: "",
     acceptingAnswers: false,
     progress: null,
     lastResult: null,
@@ -62,6 +66,10 @@
 
   function init(progress) {
     state.progress = RocketMath.storage.normalizeProgress(progress);
+    RocketMath.storage.setProgressMergeListener((mergedProgress) => {
+      state.progress = RocketMath.storage.normalizeProgress(mergedProgress);
+      RocketMath.ui.renderProgress(state.progress);
+    });
     RocketMath.ui.applyConfigs(state.progress.configs);
     RocketMath.ui.renderProgress(state.progress);
     RocketMath.ui.updateCompetitionSummaries();
@@ -75,6 +83,7 @@
   }
 
   function startMainSession(config, mode) {
+    clearTransitionTimer();
     state.config = config;
     state.mode = mode;
     state.phase = "main";
@@ -91,6 +100,7 @@
     state.wrongAnswers = [];
     state.acceptingAnswers = false;
     state.retry = null;
+    state.pendingExitDestination = "";
     startTimer();
 
     RocketMath.ui.updateScore(0);
@@ -119,6 +129,7 @@
   }
 
   function nextMainQuestion() {
+    state.transitionTimerId = null;
     if (state.questionIndex >= state.questions.length) {
       endMainSession();
       return;
@@ -196,18 +207,45 @@
     }
 
     state.questionIndex += 1;
-    window.setTimeout(nextMainQuestion, RULES.answerDelayMs);
+    state.transitionTimerId = window.setTimeout(nextMainQuestion, RULES.answerDelayMs);
   }
 
   function endMainSession() {
+    clearTransitionTimer();
     stopTimer();
     state.acceptingAnswers = false;
+    state.phase = "result";
+    const result = createCurrentResult(RULES.totalQuestions, false);
+    const previous = RocketMath.storage.getPreviousResult(state.progress, result);
+    result.previous = previous;
+    result.rewards = computeRewards(result);
+    result.baseStars = result.rewards.total;
+    state.lastResult = result;
+    RocketMath.animation.setRocketState(RocketMath.ui.elements.rocket, "complete");
+    RocketMath.audio.play(state.correctCount === RULES.totalQuestions ? "applause" : "complete");
+    RocketMath.ui.showScreen("result");
+
+    if (state.mode === "competition") {
+      handleCompetitionTurn(result);
+      return;
+    }
+
+    const recorded = RocketMath.storage.recordGameResult(state.progress, result);
+    state.progress = recorded.progress;
+    result.previous = recorded.previous;
+    result.dailyGoalBonus = recorded.dailyGoalBonus;
+    RocketMath.ui.renderProgress(state.progress);
+    RocketMath.ui.renderResult(result, state.progress, recorded.previous);
+  }
+
+  function createCurrentResult(totalQuestions, partial) {
     const elapsedSeconds = getElapsedSeconds();
     const averageCorrectSeconds = state.correctResponseTimes.length
       ? Number((state.correctResponseTimes.reduce((sum, value) => sum + value, 0)
         / state.correctResponseTimes.length / 1000).toFixed(1))
       : 0;
-    const result = {
+    const completed = Math.max(0, Number(totalQuestions) || 0);
+    return {
       sessionId: state.sessionId,
       mode: state.mode,
       groupName: state.config.groupName,
@@ -217,8 +255,8 @@
       rangeMax: state.config.rangeMax,
       difficultyMultiplier: RocketMath.questions.getDifficultyMultiplier(state.config),
       correctCount: state.correctCount,
-      totalQuestions: RULES.totalQuestions,
-      correctionRate: Math.round((state.correctCount / RULES.totalQuestions) * 100),
+      totalQuestions: completed,
+      correctionRate: completed ? Math.round((state.correctCount / completed) * 100) : 0,
       elapsedSeconds,
       averageCorrectSeconds,
       maxStreak: state.maxStreak,
@@ -226,41 +264,29 @@
       retryStars: 0,
       wrongAnswers: state.wrongAnswers.map((item) => ({ ...item })),
       playedAt: RocketMath.utils.todayString(),
-      message: getResultMessage(state.correctCount)
+      message: partial
+        ? `Mission paused after ${completed} ${completed === 1 ? "question" : "questions"}. Every step still counts!`
+        : getResultMessage(state.correctCount),
+      partial: Boolean(partial)
     };
-
-    const previous = RocketMath.storage.getPreviousResult(state.progress, result);
-    result.rewards = computeRewards(result);
-    result.baseStars = result.rewards.total;
-    const recorded = RocketMath.storage.recordGameResult(state.progress, result);
-    state.progress = recorded.progress;
-    result.previous = recorded.previous;
-    result.dailyGoalBonus = recorded.dailyGoalBonus;
-    state.lastResult = result;
-    RocketMath.animation.setRocketState(RocketMath.ui.elements.rocket, "complete");
-    RocketMath.audio.play(state.correctCount === RULES.totalQuestions ? "applause" : "complete");
-    RocketMath.ui.renderProgress(state.progress);
-    RocketMath.ui.showScreen("result");
-
-    if (state.mode === "competition") handleCompetitionTurn(result);
-    else RocketMath.ui.renderResult(result, state.progress, recorded.previous);
   }
 
   function computeRewards(result) {
     const options = getOptionStars(result);
     const isCompetition = result.mode === "competition";
     const wrongCount = Math.max(0, Number(result.totalQuestions) - Number(result.correctCount));
-    const accuracy = isCompetition
+    const completedFullMission = Number(result.totalQuestions) >= RULES.totalQuestions;
+    const accuracy = isCompetition && completedFullMission
       ? (wrongCount === 0
         ? RULES.competitionPerfectStars
         : (wrongCount === 1
           ? RULES.competitionOneWrongStars
           : (wrongCount === 2 ? RULES.competitionTwoWrongStars : 0)))
       : 0;
-    const perfect = !isCompetition && wrongCount === 0 ? RULES.practicePerfectStars : 0;
+    const perfect = !isCompetition && completedFullMission && wrongCount === 0 ? RULES.practicePerfectStars : 0;
     const optionMultiplier = isCompetition || perfect > 0 ? 1 : 0;
     const rewards = {
-      completion: isCompetition ? RULES.competitionCompletionStars : 0,
+      completion: isCompetition && completedFullMission ? RULES.competitionCompletionStars : 0,
       perfect,
       accuracy,
       operations: options.operations * optionMultiplier,
@@ -293,6 +319,14 @@
     }
 
     state.competition.challenger = result;
+    const cxyRecorded = RocketMath.storage.recordGameResult(state.progress, state.competition.cxy);
+    state.progress = cxyRecorded.progress;
+    state.competition.cxy.previous = cxyRecorded.previous;
+    state.competition.cxy.dailyGoalBonus = cxyRecorded.dailyGoalBonus;
+    const challengerRecorded = RocketMath.storage.recordGameResult(state.progress, state.competition.challenger);
+    state.progress = challengerRecorded.progress;
+    state.competition.challenger.previous = challengerRecorded.previous;
+    state.competition.challenger.dailyGoalBonus = challengerRecorded.dailyGoalBonus;
     const comparison = compareCompetition(state.competition.cxy, state.competition.challenger);
     state.competition.comparison = comparison;
     state.progress = RocketMath.storage.recordCompetition(state.progress, {
@@ -438,11 +472,12 @@
       RocketMath.ui.showHint(state.currentQuestion.hint);
       RocketMath.ui.showMessage("Almost! Try the make-ten step, then this one will return.");
     }
-    window.setTimeout(nextRetryQuestion, RULES.answerDelayMs);
+    state.transitionTimerId = window.setTimeout(nextRetryQuestion, RULES.answerDelayMs);
   }
 
   function endRetry() {
     if (!state.retry) return;
+    clearTransitionTimer();
     stopTimer();
     state.acceptingAnswers = false;
     const completedRetry = state.retry;
@@ -487,7 +522,9 @@
   }
 
   function showStart() {
+    clearTransitionTimer();
     stopTimer();
+    RocketMath.ui.closeRaceExitDialog();
     state.mode = "practice";
     state.phase = "main";
     state.competition = null;
@@ -501,10 +538,167 @@
   }
 
   function leaveMission(destination) {
+    if (state.competition && !state.competition.comparison) {
+      state.pendingExitDestination = destination;
+      state.pausedElapsed = getElapsedSeconds();
+      state.pausedTransitionPending = Boolean(state.transitionTimerId);
+      clearTransitionTimer();
+      stopTimer();
+      const activeGroup = getActiveCompetitionGroup();
+      const completed = activeGroup === state.config.groupName ? state.questionIndex : 0;
+      const correct = activeGroup === state.config.groupName ? state.correctCount : 0;
+      RocketMath.ui.showRaceExitDialog({
+        groupLabel: RocketMath.questions.getGroup(activeGroup).name,
+        completed,
+        total: RULES.totalQuestions,
+        correct,
+        otherLabel: RocketMath.questions.getGroup(activeGroup === "cxy" ? "challenger" : "cxy").name
+      });
+      return;
+    }
+
+    if (state.mode === "practice" && state.phase === "main" && state.config && state.questionIndex < RULES.totalQuestions) {
+      finishPartialPractice(destination);
+      return;
+    }
+
     const previousMode = state.mode;
     const previousGroup = state.config && state.config.groupName;
     showStart();
     RocketMath.ui.focusStartArea(destination === "home" ? "home" : previousMode, previousGroup);
+  }
+
+  function finishPartialPractice(destination) {
+    clearTransitionTimer();
+    stopTimer();
+    state.acceptingAnswers = false;
+    state.phase = "result";
+    const result = createCurrentResult(state.questionIndex, true);
+    result.rewards = computeRewards(result);
+    result.baseStars = 0;
+    const recorded = RocketMath.storage.recordGameResult(state.progress, result);
+    state.progress = recorded.progress;
+    result.previous = recorded.previous;
+    result.dailyGoalBonus = recorded.dailyGoalBonus;
+    state.lastResult = result;
+    state.pendingExitDestination = destination;
+    RocketMath.ui.renderProgress(state.progress);
+    RocketMath.ui.showScreen("result");
+    RocketMath.ui.renderResult(result, state.progress, recorded.previous, {
+      title: "Practice paused",
+      message: result.message,
+      exitDestination: destination
+    });
+    RocketMath.audio.play("complete");
+  }
+
+  function continueRace() {
+    RocketMath.ui.closeRaceExitDialog();
+    if (state.phase === "main") resumeTimer(state.pausedElapsed);
+    if (state.phase === "main" && state.pausedTransitionPending) {
+      state.transitionTimerId = window.setTimeout(nextMainQuestion, 80);
+    }
+    state.pausedTransitionPending = false;
+    state.pendingExitDestination = "";
+  }
+
+  function exitRace() {
+    if (!state.competition || state.competition.comparison) {
+      showStart();
+      RocketMath.ui.focusStartArea("home");
+      return;
+    }
+
+    clearTransitionTimer();
+    stopTimer();
+    state.acceptingAnswers = false;
+    const exitingGroup = getActiveCompetitionGroup();
+    const otherGroup = exitingGroup === "cxy" ? "challenger" : "cxy";
+    const exitingConfig = state.competition.configs[exitingGroup];
+    const otherConfig = state.competition.configs[otherGroup];
+    const activeHasProgress = state.config && state.config.groupName === exitingGroup;
+    const exitingResult = createForfeitResult(
+      exitingConfig,
+      exitingGroup,
+      activeHasProgress ? state.questionIndex : 0,
+      activeHasProgress ? state.correctCount : 0,
+      activeHasProgress ? state.wrongAnswers : [],
+      0,
+      true
+    );
+    const winnerResult = createForfeitResult(otherConfig, otherGroup, 0, 0, [], 10, false);
+    state.competition.cxy = exitingGroup === "cxy" ? exitingResult : winnerResult;
+    state.competition.challenger = exitingGroup === "challenger" ? exitingResult : winnerResult;
+
+    const cxyRecorded = RocketMath.storage.recordGameResult(state.progress, state.competition.cxy);
+    state.progress = cxyRecorded.progress;
+    state.competition.cxy.dailyGoalBonus = cxyRecorded.dailyGoalBonus;
+    const challengerRecorded = RocketMath.storage.recordGameResult(state.progress, state.competition.challenger);
+    state.progress = challengerRecorded.progress;
+    state.competition.challenger.dailyGoalBonus = challengerRecorded.dailyGoalBonus;
+    const winnerLabel = RocketMath.questions.getGroup(otherGroup).name;
+    const comparison = {
+      winnerGroup: otherGroup,
+      winner: `${winnerLabel} wins by forfeit!`,
+      message: `${winnerLabel} receives 10 stars. ${RocketMath.questions.getGroup(exitingGroup).name} can launch a fresh race any time.`,
+      bonuses: { cxy: 0, challenger: 0 },
+      cxy: state.competition.cxy,
+      challenger: state.competition.challenger
+    };
+    state.competition.comparison = comparison;
+    state.progress = RocketMath.storage.recordCompetition(state.progress, {
+      id: state.competition.id,
+      playedAt: RocketMath.utils.todayString(),
+      winner: comparison.winner,
+      winnerGroup: otherGroup,
+      bonuses: comparison.bonuses,
+      cxy: state.competition.cxy,
+      challenger: state.competition.challenger
+    });
+    RocketMath.ui.closeRaceExitDialog();
+    showStart();
+    RocketMath.ui.focusStartArea("home");
+  }
+
+  function createForfeitResult(config, groupName, totalQuestions, correctCount, wrongAnswers, stars, forfeited) {
+    const total = Math.max(0, Number(totalQuestions) || 0);
+    const rewards = {
+      completion: Math.max(0, Number(stars) || 0), perfect: 0, accuracy: 0,
+      operations: 0, difficulty: 0, range: 0, total: Math.max(0, Number(stars) || 0)
+    };
+    return {
+      sessionId: createId(`competition-${groupName}-${forfeited ? "exit" : "award"}`),
+      mode: "competition",
+      groupName,
+      groupLabel: RocketMath.questions.getGroup(groupName).name,
+      operationSet: config.operationSet,
+      difficulty: config.difficulty,
+      rangeMax: config.rangeMax,
+      difficultyMultiplier: RocketMath.questions.getDifficultyMultiplier(config),
+      correctCount: Math.max(0, Number(correctCount) || 0),
+      totalQuestions: total,
+      correctionRate: total ? Math.round((Number(correctCount) / total) * 100) : 0,
+      elapsedSeconds: forfeited ? state.pausedElapsed : 0,
+      averageCorrectSeconds: 0,
+      maxStreak: 0,
+      baseStars: rewards.total,
+      retryStars: 0,
+      wrongAnswers: Array.isArray(wrongAnswers) ? wrongAnswers.map((item) => ({ ...item })) : [],
+      playedAt: RocketMath.utils.todayString(),
+      message: forfeited ? "Race exited before completion." : "10 stars awarded after the other pilot exited.",
+      rewards,
+      partial: true,
+      forfeited: Boolean(forfeited),
+      forfeitAward: !forfeited
+    };
+  }
+
+  function getActiveCompetitionGroup() {
+    if (state.competition && state.competition.cxy && !state.competition.challenger
+      && (!state.config || state.config.groupName === "cxy" || state.questionIndex >= RULES.totalQuestions)) {
+      return "challenger";
+    }
+    return state.config && state.config.groupName === "challenger" ? "challenger" : "cxy";
   }
 
   function startTimer() {
@@ -514,9 +708,21 @@
     RocketMath.ui.updateTimer(0);
   }
 
+  function resumeTimer(elapsedSeconds) {
+    stopTimer();
+    state.startTime = Date.now() - (Math.max(0, Number(elapsedSeconds) || 0) * 1000);
+    state.timerId = window.setInterval(() => RocketMath.ui.updateTimer(getElapsedSeconds()), 1000);
+    RocketMath.ui.updateTimer(getElapsedSeconds());
+  }
+
   function stopTimer() {
     window.clearInterval(state.timerId);
     state.timerId = null;
+  }
+
+  function clearTransitionTimer() {
+    if (state.transitionTimerId) window.clearTimeout(state.transitionTimerId);
+    state.transitionTimerId = null;
   }
 
   function getElapsedSeconds() {
@@ -585,6 +791,8 @@
     resetProgress,
     showStart,
     leaveMission,
+    continueRace,
+    exitRace,
     compareCompetition,
     computeRewards
   };

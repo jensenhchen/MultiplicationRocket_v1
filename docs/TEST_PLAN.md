@@ -12,7 +12,7 @@
 
 ## Start Screen
 
-- Confirm the title is `Math Rocket: + - * /` and the English subtitle is correct.
+- Confirm the title is `Math JJCC Rocket` and the English subtitle is correct.
 - Confirm Group 1 is CXY and Group 2 is Challenger.
 - Confirm each group has Operations, Difficulty, Number Range, and Start controls.
 - Confirm CXY defaults to Addition & Subtraction, Medium, 1–10.
@@ -53,7 +53,7 @@
 - Reload and confirm total stars, group stars, stats, histories, audio settings, and retry completion remain.
 - Insert valid data under the previous progress key, reload, and confirm it migrates without crashing.
 - Insert malformed JSON and confirm the game still loads with defaults.
-- Reset progress and confirm only Math Rocket progress keys are removed; audio preferences remain.
+- Reset progress and confirm only Math JJCC Rocket progress keys are removed; audio preferences remain.
 
 ## Responsive and Accessibility
 

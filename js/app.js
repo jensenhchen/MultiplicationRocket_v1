@@ -92,13 +92,27 @@
 
     ui.elements.playAgainButton.addEventListener("click", () => {
       RocketMath.audio.play("click");
-      RocketMath.game.showStart();
+      RocketMath.game.leaveMission("back");
     });
 
     ui.elements.resultHomeButton.addEventListener("click", () => {
       RocketMath.audio.play("click");
-      RocketMath.game.showStart();
-      RocketMath.ui.focusStartArea("home");
+      RocketMath.game.leaveMission("home");
+    });
+
+    ui.elements.continueRaceButton.addEventListener("click", () => {
+      RocketMath.audio.play("click");
+      RocketMath.game.continueRace();
+    });
+
+    ui.elements.exitRaceButton.addEventListener("click", () => {
+      RocketMath.audio.play("click");
+      RocketMath.game.exitRace();
+    });
+
+    ui.elements.raceExitDialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      RocketMath.game.continueRace();
     });
 
     ui.elements.competitionNextButton.addEventListener("click", () => {

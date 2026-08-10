@@ -27,6 +27,7 @@ function createMathRocketServer(options) {
 
     if (url.pathname === "/api/progress") {
       if (request.method === "GET") {
+        await writeQueue.catch(() => undefined);
         await handleProgressRead(response, dataFile);
         return;
       }
@@ -38,9 +39,14 @@ function createMathRocketServer(options) {
             sendJson(response, 400, { error: "Progress must be a JSON object." });
             return;
           }
-          writeQueue = writeQueue.then(() => writeJsonAtomically(dataFile, progress));
-          await writeQueue;
-          sendJson(response, 200, { saved: true, savedAt: new Date().toISOString() });
+          writeQueue = writeQueue.catch(() => undefined).then(async () => {
+            const existing = await readProgressFile(dataFile);
+            const merged = mergeProgressRecords(existing, progress);
+            await writeJsonAtomically(dataFile, merged);
+            return merged;
+          });
+          const merged = await writeQueue;
+          sendJson(response, 200, { saved: true, savedAt: new Date().toISOString(), progress: merged });
         } catch (error) {
           const status = error && error.code === "BODY_TOO_LARGE" ? 413 : 400;
           sendJson(response, status, { error: status === 413 ? "Progress data is too large." : "Invalid progress data." });
@@ -55,6 +61,205 @@ function createMathRocketServer(options) {
 
     serveStaticFile(request, response, root, url.pathname);
   });
+}
+
+async function readProgressFile(dataFile) {
+  try {
+    return JSON.parse(await fs.promises.readFile(dataFile, "utf8"));
+  } catch (error) {
+    if (error && error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function mergeProgressRecords(existingValue, incomingValue) {
+  const existing = objectValue(existingValue);
+  const incoming = objectValue(incomingValue);
+  const practiceHistory = mergeEvents(existing.practiceHistory, incoming.practiceHistory, "sessionId", 2000);
+  const competitionTurnHistory = mergeEvents(existing.competitionTurnHistory, incoming.competitionTurnHistory, "sessionId", 2000);
+  const retryHistory = mergeEvents(existing.retryHistory, incoming.retryHistory, "retryId", 2000);
+  const competitionHistory = mergeEvents(existing.competitionHistory, incoming.competitionHistory, "id", 1000);
+  const wrongQuestions = mergeEvents(existing.wrongQuestions, incoming.wrongQuestions, "id", 2000, true);
+  normalizeDailyGoalBonuses([...practiceHistory, ...competitionTurnHistory]);
+
+  const eventStars = calculateEventStars(practiceHistory, competitionTurnHistory, retryHistory);
+  const existingEventStars = calculateEventStars(
+    arrayValue(existing.practiceHistory),
+    arrayValue(existing.competitionTurnHistory),
+    arrayValue(existing.retryHistory)
+  );
+  const incomingEventStars = calculateEventStars(
+    arrayValue(incoming.practiceHistory),
+    arrayValue(incoming.competitionTurnHistory),
+    arrayValue(incoming.retryHistory)
+  );
+  const legacyStars = {
+    cxy: Math.max(
+      unexplainedGroupStars(existing, existingEventStars, "cxy"),
+      unexplainedGroupStars(incoming, incomingEventStars, "cxy")
+    ),
+    challenger: Math.max(
+      unexplainedGroupStars(existing, existingEventStars, "challenger"),
+      unexplainedGroupStars(incoming, incomingEventStars, "challenger")
+    )
+  };
+  const groupStars = {
+    cxy: legacyStars.cxy + eventStars.cxy,
+    challenger: legacyStars.challenger + eventStars.challenger
+  };
+  const mergedTurns = [...practiceHistory, ...competitionTurnHistory];
+  const lastResults = mergeLastResults(existing.lastResults, incoming.lastResults, mergedTurns);
+
+  return {
+    ...existing,
+    ...incoming,
+    version: 4,
+    revision: Math.max(numberValue(existing.revision), numberValue(incoming.revision)) + 1,
+    updatedAt: new Date().toISOString(),
+    totalStars: groupStars.cxy + groupStars.challenger,
+    groupStars,
+    configs: {
+      ...objectValue(existing.configs),
+      ...objectValue(incoming.configs)
+    },
+    bestScore: mergedTurns.reduce((best, item) => Math.max(best, eventValue(item)), 0),
+    groupStats: {
+      cxy: buildGroupStats(mergedTurns, "cxy"),
+      challenger: buildGroupStats(mergedTurns, "challenger")
+    },
+    practiceHistory,
+    competitionTurnHistory,
+    competitionHistory,
+    lastResults,
+    wrongQuestions,
+    completedRetries: [...new Set([
+      ...arrayValue(existing.completedRetries).map(String),
+      ...arrayValue(incoming.completedRetries).map(String)
+    ])].slice(0, 4000),
+    retryHistory,
+    lastPlayedDate: latestText(existing.lastPlayedDate, incoming.lastPlayedDate, ...mergedTurns.map((item) => item.playedAt)),
+    gamesPlayed: mergedTurns.length
+  };
+}
+
+function mergeEvents(existingValue, incomingValue, keyName, limit, mergeReviewed) {
+  const records = new Map();
+  [...arrayValue(existingValue), ...arrayValue(incomingValue)].forEach((item, index) => {
+    if (!item || typeof item !== "object") return;
+    const key = String(item[keyName] || `${keyName}-legacy-${item.playedAt || item.completedAt || ""}-${index}`);
+    const previous = records.get(key) || {};
+    const next = { ...previous, ...item, [keyName]: String(item[keyName] || previous[keyName] || key) };
+    ["baseStars", "speedStars", "dailyGoalBonus", "retryStars", "stars"].forEach((field) => {
+      next[field] = Math.max(numberValue(previous[field]), numberValue(item[field]));
+    });
+    if (mergeReviewed) next.reviewed = Boolean(previous.reviewed || item.reviewed);
+    records.set(key, next);
+  });
+  return [...records.values()]
+    .sort((left, right) => eventDate(right).localeCompare(eventDate(left)))
+    .slice(0, limit);
+}
+
+function normalizeDailyGoalBonuses(turns) {
+  const daily = new Map();
+  turns.forEach((turn) => {
+    turn.dailyGoalBonus = 0;
+    const questions = Math.max(0, numberValue(turn.totalQuestions));
+    if (!questions || !turn.playedAt) return;
+    const key = `${normalizeGroupName(turn.groupName)}|${turn.playedAt}`;
+    const record = daily.get(key) || { questions: 0, turns: [] };
+    record.questions += questions;
+    record.turns.push(turn);
+    daily.set(key, record);
+  });
+  daily.forEach((record) => {
+    if (record.turns.length) record.turns[0].dailyGoalBonus = extraQuestionStars(record.questions);
+  });
+}
+
+function calculateEventStars(practiceHistory, competitionTurnHistory, retryHistory) {
+  const totals = { cxy: 0, challenger: 0 };
+  [...practiceHistory, ...competitionTurnHistory].forEach((item) => {
+    totals[normalizeGroupName(item.groupName)] += eventValue(item);
+  });
+  retryHistory.forEach((item) => {
+    totals[normalizeGroupName(item.groupName)] += Math.max(0, numberValue(item.stars));
+  });
+  return totals;
+}
+
+function eventValue(item) {
+  return Math.max(0, numberValue(item.baseStars))
+    + Math.max(0, numberValue(item.speedStars))
+    + Math.max(0, numberValue(item.dailyGoalBonus));
+}
+
+function unexplainedGroupStars(progress, eventStars, groupName) {
+  const stored = objectValue(progress.groupStars);
+  const legacyName = groupName === "challenger" ? "cxr" : groupName;
+  return Math.max(0, numberValue(stored[groupName] != null ? stored[groupName] : stored[legacyName]) - eventStars[groupName]);
+}
+
+function buildGroupStats(turns, groupName) {
+  const records = turns.filter((item) => normalizeGroupName(item.groupName) === groupName);
+  const latest = [...records].sort((left, right) => eventDate(right).localeCompare(eventDate(left)))[0] || {};
+  return {
+    gamesPlayed: records.length,
+    totalTime: records.reduce((sum, item) => sum + Math.max(0, numberValue(item.elapsedSeconds)), 0),
+    totalCorrect: records.reduce((sum, item) => sum + Math.max(0, numberValue(item.correctCount)), 0),
+    totalQuestions: records.reduce((sum, item) => sum + Math.max(0, numberValue(item.totalQuestions)), 0),
+    bestScore: records.reduce((best, item) => Math.max(best, eventValue(item)), 0),
+    bestRate: records.reduce((best, item) => Math.max(best, numberValue(item.correctionRate)), 0),
+    lastTime: numberValue(latest.elapsedSeconds),
+    lastCorrect: numberValue(latest.correctCount),
+    lastTotal: numberValue(latest.totalQuestions),
+    lastRate: numberValue(latest.correctionRate),
+    lastPlayedDate: latest.playedAt || ""
+  };
+}
+
+function mergeLastResults(existingValue, incomingValue, turns) {
+  const results = { ...objectValue(existingValue), ...objectValue(incomingValue) };
+  turns.forEach((turn) => {
+    const key = [
+      turn.mode === "competition" ? "competition" : "practice",
+      normalizeGroupName(turn.groupName),
+      turn.operationSet || "add-sub",
+      turn.difficulty || "medium",
+      numberValue(turn.rangeMax) || 10
+    ].join("|");
+    if (!results[key] || eventDate(turn) >= eventDate(results[key])) results[key] = turn;
+  });
+  return results;
+}
+
+function extraQuestionStars(questionCount) {
+  return Math.ceil(Math.max(0, numberValue(questionCount) - 30) / 10);
+}
+
+function normalizeGroupName(value) {
+  return value === "challenger" || value === "cxr" ? "challenger" : "cxy";
+}
+
+function eventDate(item) {
+  return String((item && (item.updatedAt || item.completedAt || item.playedAt)) || "");
+}
+
+function latestText(...values) {
+  return values.filter(Boolean).map(String).sort().pop() || "";
+}
+
+function objectValue(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function arrayValue(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function numberValue(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 async function handleProgressRead(response, dataFile) {
@@ -150,9 +355,9 @@ function sendJson(response, status, value) {
 
 if (require.main === module) {
   createMathRocketServer().listen(DEFAULT_PORT, DEFAULT_HOST, () => {
-    console.log(`Math Rocket server: http://${DEFAULT_HOST}:${DEFAULT_PORT}/`);
+    console.log(`Math JJCC Rocket server: http://${DEFAULT_HOST}:${DEFAULT_PORT}/`);
     console.log(`Progress file: ${process.env.MATH_ROCKET_DATA_FILE || path.join(DEFAULT_ROOT, "data", "progress.json")}`);
   });
 }
 
-module.exports = { createMathRocketServer };
+module.exports = { createMathRocketServer, mergeProgressRecords };

@@ -7,12 +7,12 @@
   <meta name="theme-color" content="#4da3ff">
   <meta name="color-scheme" content="light">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Math Rocket">
+  <meta name="apple-mobile-web-app-title" content="Math JJCC Rocket">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="format-detection" content="telephone=no">
 
-  <title>Math Rocket</title>
+  <title>Math JJCC Rocket</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/favicon.png">
@@ -26,14 +26,14 @@
       <div class="rocket-badge" aria-hidden="true">🚀</div>
       <div class="hero-copy">
         <h1>
-          <span>Math Rocket:</span>
+          <span>Math JJCC Rocket:</span>
           <img class="operator-title-image" src="./assets/images/math-operators.png" alt="plus, minus, multiply and divide">
         </h1>
         <p>Practice addition, subtraction, multiplication and division.</p>
       </div>
       <div class="hero-controls" aria-label="Sound controls">
-        <button id="sound-toggle" class="icon-toggle" type="button" aria-pressed="true">Sound On</button>
-        <button id="music-toggle" class="icon-toggle" type="button" aria-pressed="false">Music Off</button>
+        <button id="sound-toggle" class="icon-toggle" type="button" aria-pressed="true"><span>Sound</span><strong>On</strong></button>
+        <button id="music-toggle" class="icon-toggle" type="button" aria-pressed="false"><span>Music</span><strong>Off</strong></button>
       </div>
     </header>
 
@@ -235,7 +235,7 @@
           <button id="go-back-button" class="play-nav-button" type="button" aria-label="Go back to mission choices">
             <span aria-hidden="true">←</span> Back
           </button>
-          <button id="go-home-button" class="play-nav-button" type="button" aria-label="Go to Math Rocket homepage">
+          <button id="go-home-button" class="play-nav-button" type="button" aria-label="Go to Math JJCC Rocket homepage">
             <span aria-hidden="true">⌂</span> Home
           </button>
         </nav>
@@ -352,11 +352,24 @@
 
       <div class="result-actions">
         <button id="competition-next-button" class="hidden" type="button">Start Challenger turn</button>
-        <button id="play-again-button" type="button">Back to missions</button>
-        <button id="result-home-button" class="result-home-button" type="button">⌂ Homepage</button>
+        <button id="play-again-button" type="button">Back to Mission</button>
+        <button id="result-home-button" class="result-home-button" type="button">⌂ Home</button>
       </div>
     </section>
   </main>
+
+  <dialog id="race-exit-dialog" class="race-exit-dialog" aria-labelledby="race-exit-title">
+    <div class="race-exit-content">
+      <div class="race-exit-icon" aria-hidden="true">🚦</div>
+      <h2 id="race-exit-title">Leave this race?</h2>
+      <p id="race-exit-status" class="race-exit-status"></p>
+      <p id="race-exit-message" class="race-exit-message"></p>
+      <div class="race-exit-actions">
+        <button id="continue-race-button" type="button">Continue Race</button>
+        <button id="exit-race-button" class="exit-race-button" type="button">Exit Race</button>
+      </div>
+    </div>
+  </dialog>
 
   <script src="./js/utils.js"></script>
   <script src="./js/storage.js"></script>

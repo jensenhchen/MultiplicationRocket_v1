@@ -4,11 +4,12 @@
   const RocketMath = window.RocketMath || {};
   const STORAGE_KEY = "mathRocket.progress.v2";
   const LEGACY_STORAGE_KEY = "multiplicationRocket.progress.v1";
-  const HISTORY_LIMIT = 60;
-  const COMPETITION_LIMIT = 24;
+  const HISTORY_LIMIT = 2000;
+  const COMPETITION_LIMIT = 500;
   const WRONG_QUESTION_LIMIT = 60;
   let pendingServerProgress = null;
   let serverSaveTimer = null;
+  let progressMergeListener = null;
 
   function createEmptyStats() {
     return {
@@ -28,7 +29,9 @@
 
   function createDefaultProgress() {
     return {
-      version: 3,
+      version: 4,
+      revision: 0,
+      updatedAt: "",
       totalStars: 0,
       groupStars: { cxy: 0, challenger: 0 },
       configs: {
@@ -94,8 +97,7 @@
       headers: { Accept: "application/json" }
     });
     if (response.status === 204) {
-      await saveProgressToServer(fallback);
-      return fallback;
+      return (await saveProgressToServer(fallback)) || fallback;
     }
     if (!response.ok) throw new Error(`Progress server returned ${response.status}.`);
     const remote = normalizeProgress(await response.json());
@@ -124,7 +126,19 @@
       body: JSON.stringify(normalizeProgress(progress))
     });
     if (!response.ok) throw new Error(`Progress server returned ${response.status}.`);
-    return true;
+    const payload = await response.json().catch(() => null);
+    if (!payload || !payload.progress) return true;
+    const merged = normalizeProgress(payload.progress);
+    // Do not replace a newer unsent local snapshot with an older server response.
+    if (!pendingServerProgress) {
+      saveLocalProgress(merged);
+      if (typeof progressMergeListener === "function") progressMergeListener(merged);
+    }
+    return merged;
+  }
+
+  function setProgressMergeListener(listener) {
+    progressMergeListener = typeof listener === "function" ? listener : null;
   }
 
   async function flushServerSave() {
@@ -221,7 +235,7 @@
       return { progress, awarded: 0 };
     }
 
-    progress.completedRetries = [retryId, ...progress.completedRetries].slice(0, 200);
+    progress.completedRetries = [retryId, ...progress.completedRetries].slice(0, 4000);
     progress.totalStars += requestedStars;
     progress.groupStars[groupName] += requestedStars;
     progress.retryHistory = [{
@@ -292,6 +306,7 @@
   }
 
   function summarizeResult(result) {
+    const totalQuestions = Number(result.totalQuestions);
     return {
       sessionId: String(result.sessionId || ""),
       mode: result.mode === "competition" ? "competition" : "practice",
@@ -300,7 +315,7 @@
       difficulty: result.difficulty || "medium",
       rangeMax: Number(result.rangeMax) || 10,
       correctCount: Number(result.correctCount) || 0,
-      totalQuestions: Number(result.totalQuestions) || 10,
+      totalQuestions: Number.isFinite(totalQuestions) && totalQuestions >= 0 ? totalQuestions : 10,
       correctionRate: Number(result.correctionRate) || 0,
       elapsedSeconds: Number(result.elapsedSeconds) || 0,
       averageCorrectSeconds: Number(result.averageCorrectSeconds) || 0,
@@ -311,7 +326,10 @@
       retryStars: Number(result.retryStars) || 0,
       speedStars: Math.max(0, Number(result.speedStars) || 0),
       dailyGoalBonus: Math.max(0, Number(result.dailyGoalBonus) || 0),
-      playedAt: result.playedAt || ""
+      playedAt: result.playedAt || "",
+      partial: Boolean(result.partial),
+      forfeited: Boolean(result.forfeited),
+      forfeitAward: Boolean(result.forfeitAward)
     };
   }
 
@@ -371,7 +389,9 @@
     const sourceGroupStars = source.groupStars && typeof source.groupStars === "object" ? source.groupStars : {};
 
     return {
-      version: 3,
+      version: 4,
+      revision: Math.max(0, Number(source.revision) || 0),
+      updatedAt: source.updatedAt || "",
       totalStars: Math.max(0, Number(source.totalStars != null ? source.totalStars : source.starsEarned) || 0),
       groupStars: {
         cxy: Math.max(0, Number(sourceGroupStars.cxy) || 0),
@@ -397,7 +417,7 @@
         operators: Array.isArray(item.operators) ? item.operators : [],
         reviewed: Boolean(item.reviewed)
       })),
-      completedRetries: normalizeArray(source.completedRetries, 200).map(String),
+      completedRetries: normalizeArray(source.completedRetries, 4000).map(String),
       retryHistory: normalizeArray(source.retryHistory, HISTORY_LIMIT),
       lastPlayedDate: source.lastPlayedDate || "",
       gamesPlayed: Math.max(0, Number(source.gamesPlayed) || 0),
@@ -409,7 +429,7 @@
 
   function migrateLegacyProgress(legacy) {
     const migrated = normalizeProgress(legacy);
-    migrated.version = 3;
+    migrated.version = 4;
     migrated.wrongQuestions = migrated.wrongQuestions.map((item, index) => ({
       ...item,
       id: item.id || `legacy-${index}-${item.playedAt || "unknown"}`,
@@ -470,6 +490,7 @@
     loadServerProgress,
     saveProgress,
     flushServerSave,
+    setProgressMergeListener,
     resetProgress,
     missionKey,
     getPreviousResult,

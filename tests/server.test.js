@@ -18,26 +18,60 @@ async function run() {
     const emptyResponse = await fetch(`${baseUrl}/api/progress`);
     assert.equal(emptyResponse.status, 204);
 
-    const sample = {
-      version: 3,
-      groupStats: { cxy: { totalQuestions: 20 }, challenger: { totalQuestions: 10 } },
-      practiceHistory: []
-    };
-    const saveResponse = await fetch(`${baseUrl}/api/progress`, {
+    const makeProgress = (sessionId, groupName, baseStars) => ({
+      version: 4,
+      totalStars: baseStars,
+      groupStars: { cxy: groupName === "cxy" ? baseStars : 0, challenger: groupName === "challenger" ? baseStars : 0 },
+      practiceHistory: [{
+        sessionId,
+        mode: "practice",
+        groupName,
+        correctCount: 10,
+        totalQuestions: 10,
+        correctionRate: 100,
+        baseStars,
+        playedAt: "2026-08-10"
+      }]
+    });
+    const samples = [
+      makeProgress("session-a", "cxy", 5),
+      makeProgress("session-b", "cxy", 6),
+      makeProgress("session-c", "cxy", 5),
+      makeProgress("session-d", "cxy", 5),
+      makeProgress("session-parent", "challenger", 7)
+    ];
+    const saveResponses = await Promise.all(samples.map((sample) => fetch(`${baseUrl}/api/progress`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(sample)
+    })));
+    saveResponses.forEach((response) => assert.equal(response.status, 200));
+
+    const saved = JSON.parse(fs.readFileSync(dataFile, "utf8"));
+    assert.equal(saved.practiceHistory.length, 5, "concurrent sessions should be merged");
+    assert.equal(saved.groupStars.cxy, 22, "40 questions earn one daily-volume star after the four session awards");
+    assert.equal(saved.groupStars.challenger, 7);
+    assert.equal(saved.totalStars, 29);
+
+    const duplicateResponse = await fetch(`${baseUrl}/api/progress`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(samples[0])
     });
-    assert.equal(saveResponse.status, 200);
-    assert.deepEqual(JSON.parse(fs.readFileSync(dataFile, "utf8")), sample);
+    assert.equal(duplicateResponse.status, 200);
+    const duplicatePayload = await duplicateResponse.json();
+    assert.equal(duplicatePayload.progress.practiceHistory.length, 5, "retries must not duplicate a session");
+    assert.equal(duplicatePayload.progress.totalStars, 29);
 
     const loadResponse = await fetch(`${baseUrl}/api/progress`);
     assert.equal(loadResponse.status, 200);
-    assert.deepEqual(await loadResponse.json(), sample);
+    const loaded = await loadResponse.json();
+    assert.equal(loaded.practiceHistory.length, 5);
+    assert.equal(loaded.totalStars, 29);
 
     const protectedResponse = await fetch(`${baseUrl}/data/progress.json`);
     assert.equal(protectedResponse.status, 404);
-    console.log("Server persistence tests passed.");
+    console.log("Server persistence and concurrent merge tests passed.");
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

@@ -237,6 +237,29 @@ const imperfectPractice = RocketMath.game.computeRewards({
 });
 assert.equal(imperfectPractice.total, 0, "practice stars require a perfect first attempt");
 
+const pausedPractice = RocketMath.game.computeRewards({
+  mode: "practice",
+  groupName: "cxy",
+  operationSet: "all",
+  difficulty: "hard",
+  rangeMax: 20,
+  correctCount: 3,
+  totalQuestions: 3,
+  partial: true
+});
+assert.equal(pausedPractice.total, 0, "a partial practice must not receive the full-mission perfect award");
+
+const pausedSummary = storage.recordGameResult(storage.createDefaultProgress(), {
+  ...result,
+  sessionId: "paused-zero",
+  totalQuestions: 0,
+  correctCount: 0,
+  baseStars: 0,
+  partial: true
+}).progress.practiceHistory[0];
+assert.equal(pausedSummary.totalQuestions, 0, "a zero-answer partial mission must stay 0/0 in its summary");
+assert.equal(pausedSummary.partial, true);
+
 const competitionBasis = RocketMath.game.computeRewards({
   mode: "competition",
   groupName: "cxy",

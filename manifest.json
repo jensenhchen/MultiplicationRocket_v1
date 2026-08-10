@@ -1,6 +1,6 @@
 {
-  "name": "Math Rocket",
-  "short_name": "Math Rocket",
+  "name": "Math JJCC Rocket",
+  "short_name": "JJCC Rocket",
   "description": "A cheerful offline mental-maths game that builds confidence with make-ten and break-ten strategies.",
   "start_url": "./index.html",
   "scope": "./",
