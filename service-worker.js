@@ -1,4 +1,4 @@
-const CACHE_NAME = "math-rocket-jjcc-v4.3.0";
+const CACHE_NAME = "math-rocket-jjcc-v4.3.1";
 const BASE_URL = self.registration.scope;
 
 const REQUIRED_ASSETS = [
@@ -11,7 +11,7 @@ const REQUIRED_ASSETS = [
   "./css/responsive.css",
   "./css/animations.css",
   "./js/utils.js",
-  "./js/runtime-config.js",
+  "./js/runtime-config.js?v=20260810-1",
   "./js/storage.js",
   "./js/questions.js",
   "./js/audio.js",

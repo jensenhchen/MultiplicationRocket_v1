@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  // After deploying the Cloudflare Worker, paste its /api/progress URL here.
-  // Leave empty while using the local Node server; storage.js will use ./api/progress.
-  window.MATH_ROCKET_API_URL = window.MATH_ROCKET_API_URL || "";
+  // Central Cloudflare D1 progress service used by the GitHub Pages app.
+  window.MATH_ROCKET_API_URL = window.MATH_ROCKET_API_URL
+    || "https://math-rocket-jjcc-sync.jensenhchen.workers.dev/api/progress";
 })();

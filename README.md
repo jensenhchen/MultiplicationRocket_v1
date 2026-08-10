@@ -80,10 +80,10 @@ npx wrangler d1 migrations apply math-rocket-jjcc --remote
 npx wrangler deploy
 ```
 
-Finally, put the deployed endpoint in `js/runtime-config.js`:
+Finally, put the deployed endpoint in `js/runtime-config.js`. The current production endpoint is:
 
 ```js
-window.MATH_ROCKET_API_URL = "https://YOUR-WORKER.workers.dev/api/progress";
+window.MATH_ROCKET_API_URL = "https://math-rocket-jjcc-sync.jensenhchen.workers.dev/api/progress";
 ```
 
 Commit and push that one configuration change so the GitHub Pages version uses D1. Do not place Cloudflare login tokens in the repository. `ALLOWED_ORIGIN` limits browser access to `https://jensenhchen.github.io`; local `localhost` and `127.0.0.1` origins are also accepted for testing.
@@ -114,4 +114,4 @@ node tests/cloudflare-worker.test.mjs
 
 ## Deployment and Offline Use
 
-GitHub Pages cannot write files, so cross-device synchronization becomes active only after the deployed Worker URL is entered in `js/runtime-config.js`. Load the game once while online to cache the app shell. On iPad or iPhone, use Safari’s **Add to Home Screen** action to install Math Rocket (JJCC).
+GitHub Pages cannot write files itself, so it sends progress to the deployed Cloudflare Worker and D1 database configured in `js/runtime-config.js`. Load the game once while online to cache the app shell. On iPad or iPhone, use Safari’s **Add to Home Screen** action to install Math Rocket (JJCC).
