@@ -16,7 +16,7 @@ The browser app uses HTML, CSS, and vanilla JavaScript. GitHub Pages hosts the s
 - Age-appropriate number, result, multiplication, and division limits
 - Seven-day question-volume bars, correct/total curves, daily star summaries, and a 210-question goal (30 per day) for each group
 - Shared Cloudflare D1 progress with automatic on-device fallback
-- Hidden parent star adjustment on the title operator image: single-click adds 20 Challenger Practice-today stars; double-click removes 20
+- Hidden parent star adjustment on the title operator image: double-click adds 20 Challenger Practice-today stars; triple-click removes 20
 - The full addition/subtraction/multiplication/division subtitle remains visible on mobile browsers and installed PWAs
 - Large animated star and trophy celebrations
 - Supportive feedback after competition mistakes and congratulations for progress and wins
@@ -41,6 +41,7 @@ Easy uses 2 numbers, Medium uses 3, and Hard uses 4. CXY is intentionally gentle
 - Break-ten problems encourage subtracting to ten first, such as `13 − 5`.
 - Multiplication uses controlled fact tables; CXY Easy starts with 2, 5, and 10.
 - Division is exact, uses no zero divisor, and avoids oversized dividends.
+- Multiplication & Division Easy sets include four two-digit × one-digit questions (two with carrying and two without) plus one exact two-digit ÷ one-digit question per ten-question mission.
 - Every question has four distinct choices and one correct answer.
 - Expressions are evaluated safely without `eval()`.
 

@@ -4,7 +4,7 @@
   const RocketMath = window.RocketMath;
   const ui = RocketMath.ui;
   let operatorClickTimer = null;
-  let operatorFirstClickAt = 0;
+  let operatorClickCount = 0;
 
   async function boot() {
     const localProgress = RocketMath.storage.loadProgress();
@@ -44,23 +44,21 @@
     if (ui.elements.operatorTitleImage) {
       ui.elements.operatorTitleImage.addEventListener("click", (event) => {
         event.preventDefault();
-        const now = Date.now();
-        const isDoubleClick = operatorClickTimer && now - operatorFirstClickAt <= 380;
-        if (isDoubleClick) {
-          window.clearTimeout(operatorClickTimer);
+        operatorClickCount += 1;
+        if (operatorClickTimer) window.clearTimeout(operatorClickTimer);
+
+        if (operatorClickCount >= 3) {
+          operatorClickCount = 0;
           operatorClickTimer = null;
-          operatorFirstClickAt = 0;
           applyHiddenChallengerAdjustment(-20);
           return;
         }
 
-        if (operatorClickTimer) window.clearTimeout(operatorClickTimer);
-        operatorFirstClickAt = now;
         operatorClickTimer = window.setTimeout(() => {
+          if (operatorClickCount === 2) applyHiddenChallengerAdjustment(20);
           operatorClickTimer = null;
-          operatorFirstClickAt = 0;
-          applyHiddenChallengerAdjustment(20);
-        }, 300);
+          operatorClickCount = 0;
+        }, 420);
       });
       ui.elements.operatorTitleImage.addEventListener("dblclick", (event) => event.preventDefault());
     }

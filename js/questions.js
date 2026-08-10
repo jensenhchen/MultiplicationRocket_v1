@@ -51,6 +51,19 @@
     "varied"
   ]);
 
+  const EASY_MUL_DIV_PLAN = Object.freeze([
+    "two-digit-multiply-no-carry",
+    null,
+    "two-digit-multiply-carry",
+    null,
+    "two-digit-divide",
+    null,
+    "two-digit-multiply-no-carry",
+    null,
+    "two-digit-multiply-carry",
+    null
+  ]);
+
   const GENERATION_RULES = {
     attemptsPerQuestion: 320,
     attemptsPerSetItem: 100,
@@ -96,16 +109,17 @@
 
     for (let index = 0; index < total; index += 1) {
       let question = null;
+      const setStrategy = getSetQuestionStrategy(config, index);
 
       for (let attempt = 0; attempt < GENERATION_RULES.attemptsPerSetItem; attempt += 1) {
-        const candidate = createQuestion(config, index + attempt * total);
+        const candidate = createQuestion(config, index + attempt * total, setStrategy);
         if (!signatures.has(candidate.signature)) {
           question = candidate;
           break;
         }
       }
 
-      if (!question) question = createQuestion(config, index);
+      if (!question) question = createQuestion(config, index, setStrategy);
       signatures.add(question.signature);
       questions.push(question);
     }
@@ -113,16 +127,18 @@
     return questions;
   }
 
-  function createQuestion(options, questionIndex) {
+  function createQuestion(options, questionIndex, requestedStrategy) {
     const config = normalizeOptions(options);
     const index = Math.abs(Number(questionIndex) || 0);
-    const strategy = getStrategy(config, index);
+    const strategy = requestedStrategy || getStrategy(config, index);
     const resultLimit = getResultLimit(config);
 
     for (let attempt = 0; attempt < GENERATION_RULES.attemptsPerQuestion; attempt += 1) {
-      const built = config.groupName === "cxy" && config.operationSet === "add-sub"
-        ? buildCxyAddSubtract(config, strategy, index + attempt)
-        : buildGeneralExpression(config, index + attempt, resultLimit);
+      const built = isTwoDigitFactStrategy(strategy)
+        ? buildEasyTwoDigitFact(config, strategy, resultLimit)
+        : (config.groupName === "cxy" && config.operationSet === "add-sub"
+          ? buildCxyAddSubtract(config, strategy, index + attempt)
+          : buildGeneralExpression(config, index + attempt, resultLimit));
 
       if (!built) continue;
       const expression = formatExpression(built.numbers, built.operators);
@@ -145,6 +161,59 @@
     }
 
     return createFallbackQuestion(config, index, strategy);
+  }
+
+  function getSetQuestionStrategy(config, questionIndex) {
+    if (config.operationSet !== "mul-div" || config.difficulty !== "easy") return null;
+    return EASY_MUL_DIV_PLAN[questionIndex % EASY_MUL_DIV_PLAN.length];
+  }
+
+  function isTwoDigitFactStrategy(strategy) {
+    return strategy === "two-digit-multiply-carry"
+      || strategy === "two-digit-multiply-no-carry"
+      || strategy === "two-digit-divide";
+  }
+
+  function buildEasyTwoDigitFact(config, strategy, resultLimit) {
+    const singleDigits = getMultiplicationTable(config).filter((value) => value >= 2 && value <= 9);
+    if (!singleDigits.length) return null;
+
+    if (strategy === "two-digit-divide") {
+      const candidates = [];
+      singleDigits.forEach((divisor) => {
+        const minimumQuotient = Math.ceil(10 / divisor);
+        const maximumQuotient = Math.min(Math.floor(99 / divisor), Math.floor(resultLimit / divisor));
+        for (let quotient = minimumQuotient; quotient <= maximumQuotient; quotient += 1) {
+          const dividend = divisor * quotient;
+          if (dividend >= 10 && dividend <= 99) candidates.push([dividend, divisor]);
+        }
+      });
+      if (!candidates.length) return null;
+      const [dividend, divisor] = candidates[randomNumber(0, candidates.length - 1)];
+      return makeStep(
+        [dividend, divisor],
+        ["divide"],
+        strategy,
+        `Use the fact family: ${divisor} × ${dividend / divisor} = ${dividend}`
+      );
+    }
+
+    const requiresCarry = strategy === "two-digit-multiply-carry";
+    const candidates = [];
+    singleDigits.forEach((factor) => {
+      const maximum = Math.min(99, Math.floor(resultLimit / factor));
+      for (let multiplicand = 10; multiplicand <= maximum; multiplicand += 1) {
+        const carriesFromOnes = (multiplicand % 10) * factor >= 10;
+        if (carriesFromOnes === requiresCarry) candidates.push([multiplicand, factor]);
+      }
+    });
+    if (!candidates.length) return null;
+    const [multiplicand, factor] = candidates[randomNumber(0, candidates.length - 1)];
+    const onesProduct = (multiplicand % 10) * factor;
+    const hint = requiresCarry
+      ? `Multiply the ones first: ${multiplicand % 10} × ${factor} = ${onesProduct}, then carry the ten`
+      : `Multiply the ones first: ${multiplicand % 10} × ${factor} = ${onesProduct}, with no carry`;
+    return makeStep([multiplicand, factor], ["multiply"], strategy, hint);
   }
 
   function getStrategy(config, questionIndex) {
@@ -466,9 +535,18 @@
     if (!Array.isArray(question.numbers) || question.numbers.length !== expectedOperands) {
       errors.push("wrong operand count");
     }
-    if (!question.numbers.every((number) => Number.isInteger(number) && number >= 1 && number <= config.rangeMax)) {
-      errors.push("operand outside selected range");
-    }
+    const isTwoDigitFact = isTwoDigitFactStrategy(question.strategy)
+      && config.operationSet === "mul-div"
+      && config.difficulty === "easy";
+    const operandsAreValid = isTwoDigitFact
+      ? Number.isInteger(question.numbers[0])
+        && question.numbers[0] >= 10
+        && question.numbers[0] <= 99
+        && Number.isInteger(question.numbers[1])
+        && question.numbers[1] >= 1
+        && question.numbers[1] <= 9
+      : question.numbers.every((number) => Number.isInteger(number) && number >= 1 && number <= config.rangeMax);
+    if (!operandsAreValid) errors.push("operand outside selected range");
     if (!question.operators.every((operator) => allowedOperators.includes(operator))) {
       errors.push("operator outside selected set");
     }
@@ -540,6 +618,7 @@
     OPERATION_SETS,
     GENERATION_RULES,
     CXY_STRATEGY_PLAN,
+    EASY_MUL_DIV_PLAN,
     normalizeOptions,
     createQuestion,
     createQuestionSet,

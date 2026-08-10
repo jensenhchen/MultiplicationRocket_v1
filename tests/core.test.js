@@ -65,7 +65,13 @@ groups.forEach((groupName) => {
           generatedCount += 1;
           const validation = RocketMath.questions.validateQuestion(question);
           assert(validation.valid, `${validation.errors.join(", ")} in ${question.text}`);
-          assert(question.numbers.every((number) => number >= 1 && number <= rangeMax));
+          const isTwoDigitFact = /^two-digit-/.test(question.strategy || "");
+          if (isTwoDigitFact) {
+            assert(question.numbers[0] >= 10 && question.numbers[0] <= 99);
+            assert(question.numbers[1] >= 1 && question.numbers[1] <= 9);
+          } else {
+            assert(question.numbers.every((number) => number >= 1 && number <= rangeMax));
+          }
           assert.equal(new Set(question.choices).size, 4);
           assert(question.choices.includes(question.answer));
 
@@ -114,6 +120,25 @@ groups.forEach((groupName) => {
               assert(tenIsUsedFirst, `first step should use ten in ${question.text}`);
             }
           });
+        }
+
+        if (operationSet === "mul-div" && difficulty === "easy") {
+          const twoDigitMultiplications = questions.filter((question) => (
+            question.strategy === "two-digit-multiply-carry"
+            || question.strategy === "two-digit-multiply-no-carry"
+          ));
+          const carrying = twoDigitMultiplications.filter((question) => (
+            (question.numbers[0] % 10) * question.numbers[1] >= 10
+          ));
+          const noCarry = twoDigitMultiplications.filter((question) => (
+            (question.numbers[0] % 10) * question.numbers[1] < 10
+          ));
+          const twoDigitDivisions = questions.filter((question) => question.strategy === "two-digit-divide");
+          assert.equal(twoDigitMultiplications.length, 4, `expected four two-digit multiplications in ${JSON.stringify(config)}`);
+          assert.equal(carrying.length, 2, `expected two carrying multiplications in ${JSON.stringify(config)}`);
+          assert.equal(noCarry.length, 2, `expected two no-carry multiplications in ${JSON.stringify(config)}`);
+          assert.equal(twoDigitDivisions.length, 1, `expected one two-digit exact division in ${JSON.stringify(config)}`);
+          assert.equal(twoDigitDivisions[0].numbers[0] % twoDigitDivisions[0].numbers[1], 0);
         }
       });
     });
