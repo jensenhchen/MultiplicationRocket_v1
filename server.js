@@ -20,7 +20,6 @@ function createMathRocketServer(options) {
   const settings = options || {};
   const root = path.resolve(settings.root || DEFAULT_ROOT);
   const dataFile = path.resolve(settings.dataFile || process.env.MATH_ROCKET_DATA_FILE || path.join(root, "data", "progress.json"));
-  const recordsDirectory = path.resolve(settings.recordsDirectory || process.env.MATH_ROCKET_RECORDS_DIR || path.join(path.dirname(dataFile), "records"));
   let writeQueue = Promise.resolve();
 
   return http.createServer(async (request, response) => {
@@ -29,7 +28,7 @@ function createMathRocketServer(options) {
     if (url.pathname === "/api/progress") {
       if (request.method === "GET") {
         await writeQueue.catch(() => undefined);
-        await handleProgressRead(response, dataFile, recordsDirectory);
+        await handleProgressRead(response, dataFile);
         return;
       }
 
@@ -41,23 +40,20 @@ function createMathRocketServer(options) {
             sendJson(response, 400, { error: "Progress must be a JSON object." });
             return;
           }
-          const requestedSessionId = body && body.progress ? body.sessionId : request.headers["x-math-rocket-session"];
-          const sessionId = normalizeAccessSessionId(requestedSessionId) || createAccessSessionId();
+          const requestedDeviceId = body && body.progress ? body.deviceId : request.headers["x-math-rocket-device"];
+          const deviceId = normalizeDeviceId(requestedDeviceId);
           writeQueue = writeQueue.catch(() => undefined).then(async () => {
-            const record = await writeSessionRecord(recordsDirectory, sessionId, progress);
-            const aggregate = await aggregateProgressRecords(dataFile, recordsDirectory);
+            const existing = await readProgressFile(dataFile);
+            const aggregate = mergeProgressRecords(existing, progress);
             await writeJsonAtomically(dataFile, aggregate);
-            const recordCount = await countRecordFiles(recordsDirectory);
-            return { aggregate, record, recordCount };
+            return aggregate;
           });
-          const saved = await writeQueue;
+          const aggregate = await writeQueue;
           sendJson(response, request.method === "POST" ? 201 : 200, {
             saved: true,
             savedAt: new Date().toISOString(),
-            sessionId,
-            recordFile: path.basename(saved.record.filePath),
-            recordCount: saved.recordCount,
-            progress: saved.aggregate
+            deviceId,
+            progress: aggregate
           });
         } catch (error) {
           const status = error && error.code === "BODY_TOO_LARGE" ? 413 : 400;
@@ -75,67 +71,9 @@ function createMathRocketServer(options) {
   });
 }
 
-async function writeSessionRecord(recordsDirectory, sessionId, incomingProgress) {
-  await fs.promises.mkdir(recordsDirectory, { recursive: true });
-  const filePath = path.join(recordsDirectory, `record-${sessionId}.json`);
-  const existingDocument = await readProgressFile(filePath);
-  const existingProgress = existingDocument && existingDocument.progress
-    ? existingDocument.progress
-    : existingDocument;
-  const progress = mergeProgressRecords(existingProgress, incomingProgress);
-  const now = new Date().toISOString();
-  const document = {
-    formatVersion: 1,
-    sessionId,
-    createdAt: existingDocument && existingDocument.createdAt ? existingDocument.createdAt : now,
-    updatedAt: now,
-    progress
-  };
-  await writeJsonAtomically(filePath, document);
-  return { filePath, document };
-}
-
-async function aggregateProgressRecords(dataFile, recordsDirectory) {
-  let aggregate = await readProgressFile(dataFile);
-  let files = [];
-  try {
-    files = (await fs.promises.readdir(recordsDirectory, { withFileTypes: true }))
-      .filter((entry) => entry.isFile() && /^record-[A-Za-z0-9_-]+\.json$/.test(entry.name))
-      .map((entry) => entry.name)
-      .sort();
-  } catch (error) {
-    if (!error || error.code !== "ENOENT") throw error;
-  }
-
-  for (const fileName of files) {
-    try {
-      const document = await readProgressFile(path.join(recordsDirectory, fileName));
-      const progress = document && document.progress ? document.progress : document;
-      if (progress) aggregate = mergeProgressRecords(aggregate, progress);
-    } catch (error) {
-      // A partially damaged record must not hide valid progress from other sessions.
-    }
-  }
-  return aggregate;
-}
-
-async function countRecordFiles(recordsDirectory) {
-  try {
-    const entries = await fs.promises.readdir(recordsDirectory, { withFileTypes: true });
-    return entries.filter((entry) => entry.isFile() && /^record-[A-Za-z0-9_-]+\.json$/.test(entry.name)).length;
-  } catch (error) {
-    if (error && error.code === "ENOENT") return 0;
-    throw error;
-  }
-}
-
-function normalizeAccessSessionId(value) {
-  const sessionId = String(value || "").trim();
-  return /^[A-Za-z0-9][A-Za-z0-9_-]{7,119}$/.test(sessionId) ? sessionId : "";
-}
-
-function createAccessSessionId() {
-  return `access-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+function normalizeDeviceId(value) {
+  const deviceId = String(value || "").trim();
+  return /^[A-Za-z0-9][A-Za-z0-9_-]{7,119}$/.test(deviceId) ? deviceId : "";
 }
 
 async function readProgressFile(dataFile) {
@@ -337,9 +275,9 @@ function numberValue(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-async function handleProgressRead(response, dataFile, recordsDirectory) {
+async function handleProgressRead(response, dataFile) {
   try {
-    const progress = await aggregateProgressRecords(dataFile, recordsDirectory);
+    const progress = await readProgressFile(dataFile);
     if (!progress) {
       response.writeHead(204, { "Cache-Control": "no-store" });
       response.end();
@@ -431,8 +369,7 @@ if (require.main === module) {
   createMathRocketServer().listen(DEFAULT_PORT, DEFAULT_HOST, () => {
     console.log(`Math Rocket (JJCC) server: http://${DEFAULT_HOST}:${DEFAULT_PORT}/`);
     console.log(`Progress file: ${process.env.MATH_ROCKET_DATA_FILE || path.join(DEFAULT_ROOT, "data", "progress.json")}`);
-    console.log(`Session records: ${process.env.MATH_ROCKET_RECORDS_DIR || path.join(DEFAULT_ROOT, "data", "records")}`);
   });
 }
 
-module.exports = { createMathRocketServer, mergeProgressRecords, aggregateProgressRecords };
+module.exports = { createMathRocketServer, mergeProgressRecords };

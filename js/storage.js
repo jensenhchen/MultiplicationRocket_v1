@@ -4,10 +4,11 @@
   const RocketMath = window.RocketMath || {};
   const STORAGE_KEY = "mathRocket.progress.v2";
   const LEGACY_STORAGE_KEY = "multiplicationRocket.progress.v1";
+  const DEVICE_ID_STORAGE_KEY = "mathRocket.deviceId.v1";
   const HISTORY_LIMIT = 2000;
   const COMPETITION_LIMIT = 500;
   const WRONG_QUESTION_LIMIT = 60;
-  const ACCESS_SESSION_ID = createAccessSessionId();
+  const DEVICE_ID = loadOrCreateDeviceId();
   let pendingServerProgress = null;
   let serverSaveTimer = null;
   let progressMergeListener = null;
@@ -99,7 +100,7 @@
       method: "POST",
       cache: "no-store",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: ACCESS_SESSION_ID, progress: fallback })
+      body: JSON.stringify({ deviceId: DEVICE_ID, progress: fallback })
     });
     if (response.status === 404) {
       serverPersistenceAvailable = false;
@@ -132,7 +133,7 @@
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sessionId: ACCESS_SESSION_ID,
+        deviceId: DEVICE_ID,
         progress: normalizeProgress(progress)
       })
     });
@@ -180,11 +181,24 @@
     return configured || "./api/progress";
   }
 
-  function createAccessSessionId() {
+  function loadOrCreateDeviceId() {
+    try {
+      const existing = window.localStorage.getItem(DEVICE_ID_STORAGE_KEY);
+      if (/^[A-Za-z0-9][A-Za-z0-9_-]{7,119}$/.test(existing || "")) return existing;
+    } catch (error) {
+      // A generated in-memory ID still allows play when local storage is unavailable.
+    }
+
     const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
       ? window.crypto.randomUUID().replace(/-/g, "").slice(0, 12)
       : Math.random().toString(36).slice(2, 14);
-    return `access-${Date.now()}-${randomPart}`;
+    const deviceId = `device-${randomPart}`;
+    try {
+      window.localStorage.setItem(DEVICE_ID_STORAGE_KEY, deviceId);
+    } catch (error) {
+      // Keep the in-memory ID for this page load.
+    }
+    return deviceId;
   }
 
   function setProgressMergeListener(listener) {
@@ -535,7 +549,8 @@
   RocketMath.storage = {
     STORAGE_KEY,
     LEGACY_STORAGE_KEY,
-    ACCESS_SESSION_ID,
+    DEVICE_ID_STORAGE_KEY,
+    DEVICE_ID,
     createDefaultProgress,
     loadProgress,
     loadServerProgress,

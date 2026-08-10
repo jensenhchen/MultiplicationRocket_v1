@@ -2,7 +2,7 @@
 
 Math Rocket (JJCC) is a cheerful browser game designed to help a seven-year-old build confidence and speed with mental arithmetic. Its main focus is making ten and breaking ten in addition and subtraction. A parent can join as Challenger to turn practice into a short, friendly competition.
 
-The browser app uses HTML, CSS, and vanilla JavaScript. A small dependency-free Node.js server serves the app and stores shared CXY and Challenger progress in `data/progress.json`. Browser `localStorage` remains an offline fallback.
+The browser app uses HTML, CSS, and vanilla JavaScript. GitHub Pages hosts the static game, while a free Cloudflare Worker and D1 database provide one central progress service for Edge, Chrome, Android, iPhone, and iPad. Browser `localStorage` remains an offline fallback.
 
 ## Features
 
@@ -15,7 +15,7 @@ The browser app uses HTML, CSS, and vanilla JavaScript. A small dependency-free 
 - Child-first addition/subtraction generation with at least 60% make-ten or break-ten questions for CXY
 - Age-appropriate number, result, multiplication, and division limits
 - Seven-day question-volume bars, correct/total curves, daily star summaries, and a 210-question goal (30 per day) for each group
-- Shared server-file progress with automatic on-device fallback
+- Shared Cloudflare D1 progress with automatic on-device fallback
 - Large animated star and trophy celebrations
 - Supportive feedback after competition mistakes and congratulations for progress and wins
 - Music, sound effects, rocket animation, confetti, and encouraging English messages
@@ -57,9 +57,36 @@ An only-perfect pilot wins immediately. Otherwise, total competition stars decid
 
 ## Progress Data
 
-The Node server creates one timestamped file per browser access session in `data/records/`, for example `record-access-1786321234567-a1b2c3d4.json`. At session start and during synchronization, it scans every record, de-duplicates mission/event IDs, and writes the combined snapshot to `data/progress.json`. Both the record directory and combined file are excluded from Git so deployment updates do not overwrite a child’s progress.
+The timestamped record-file design has been removed. Each browser receives one stable, locally stored device ID. The Cloudflare Worker keeps one current snapshot per device in D1 and merges all unique practice, competition, and review IDs before responding. Separate device rows prevent concurrent Edge, Chrome, Android, and iPad saves from overwriting one another, while de-duplication prevents a repeated upload from awarding stars twice.
 
-The browser mirrors this data in `localStorage` so a temporary connection problem does not stop a mission. When the server is reachable again, its current device snapshot is merged into that access session’s record and the combined result is returned to every connected browser.
+The browser mirrors this data in `localStorage` so a temporary connection problem does not stop a mission. When the service is reachable again, the local snapshot is uploaded and the combined result is returned. Connected clients refresh shared progress every six seconds and whenever the app regains focus.
+
+For local development only, `node server.js` stores the merged result in a single ignored file at `data/progress.json`; it no longer creates a `data/records` directory.
+
+## Free Cloudflare Deployment
+
+The Worker source is `cloudflare/worker.mjs`, and the D1 schema is `cloudflare/migrations/0001_initial.sql`. A Cloudflare account is required once to create and deploy these resources:
+
+```bash
+cd cloudflare
+npx wrangler login
+npx wrangler d1 create math-rocket-jjcc
+```
+
+Copy `wrangler.toml.example` to `wrangler.toml`, replace `REPLACE_WITH_D1_DATABASE_ID` with the ID printed by the previous command, then run:
+
+```bash
+npx wrangler d1 migrations apply math-rocket-jjcc --remote
+npx wrangler deploy
+```
+
+Finally, put the deployed endpoint in `js/runtime-config.js`:
+
+```js
+window.MATH_ROCKET_API_URL = "https://YOUR-WORKER.workers.dev/api/progress";
+```
+
+Commit and push that one configuration change so the GitHub Pages version uses D1. Do not place Cloudflare login tokens in the repository. `ALLOWED_ORIGIN` limits browser access to `https://jensenhchen.github.io`; local `localhost` and `127.0.0.1` origins are also accepted for testing.
 
 ## Run and Debug in VS Code
 
@@ -79,10 +106,12 @@ No dependency installation is required:
 
 ```bash
 node --check js/app.js
+node --check cloudflare/worker.mjs
 node tests/core.test.js
 node tests/server.test.js
+node tests/cloudflare-worker.test.mjs
 ```
 
 ## Deployment and Offline Use
 
-Server-file persistence requires a Node.js host with a writable, persistent disk. The server serializes writes and merges session IDs so simultaneous PC, Android and iPad games do not overwrite one another. Connected clients refresh shared progress every six seconds and whenever the app regains focus. GitHub Pages can display the app but cannot write `data/progress.json`; use a Node-capable host for shared progress. Load the deployed game once while online to cache the app shell. On iPad or iPhone, use Safari’s **Add to Home Screen** action to install Math Rocket (JJCC).
+GitHub Pages cannot write files, so cross-device synchronization becomes active only after the deployed Worker URL is entered in `js/runtime-config.js`. Load the game once while online to cache the app shell. On iPad or iPhone, use Safari’s **Add to Home Screen** action to install Math Rocket (JJCC).
