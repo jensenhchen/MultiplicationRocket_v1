@@ -7,6 +7,7 @@
   const HISTORY_LIMIT = 2000;
   const COMPETITION_LIMIT = 500;
   const WRONG_QUESTION_LIMIT = 60;
+  const ACCESS_SESSION_ID = createAccessSessionId();
   let pendingServerProgress = null;
   let serverSaveTimer = null;
   let progressMergeListener = null;
@@ -95,27 +96,20 @@
     if (!canUseProgressServer()) return fallback;
 
     const response = await window.fetch(getProgressApiUrl(), {
+      method: "POST",
       cache: "no-store",
-      headers: { Accept: "application/json" }
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: ACCESS_SESSION_ID, progress: fallback })
     });
     if (response.status === 404) {
       serverPersistenceAvailable = false;
       throw new Error("Shared progress server is not available on this host.");
     }
-    if (response.status === 204) {
-      serverPersistenceAvailable = true;
-      return (await saveProgressToServer(fallback)) || fallback;
-    }
     if (!response.ok) throw new Error(`Progress server returned ${response.status}.`);
     serverPersistenceAvailable = true;
-    const remote = normalizeProgress(await response.json());
-    // Upload the device snapshot too: it may contain missions completed while offline.
-    try {
-      const combined = await saveProgressToServer(fallback);
-      return combined && typeof combined === "object" ? combined : saveLocalProgress(remote);
-    } catch (error) {
-      return saveLocalProgress(remote);
-    }
+    const payload = await response.json();
+    const aggregate = normalizeProgress(payload && payload.progress ? payload.progress : payload);
+    return saveLocalProgress(aggregate);
   }
 
   function scheduleServerSave(progress) {
@@ -137,7 +131,10 @@
     const response = await window.fetch(getProgressApiUrl(), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(normalizeProgress(progress))
+      body: JSON.stringify({
+        sessionId: ACCESS_SESSION_ID,
+        progress: normalizeProgress(progress)
+      })
     });
     if (response.status === 404) {
       serverPersistenceAvailable = false;
@@ -181,6 +178,13 @@
       ? window.MATH_ROCKET_API_URL.trim()
       : "";
     return configured || "./api/progress";
+  }
+
+  function createAccessSessionId() {
+    const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
+      ? window.crypto.randomUUID().replace(/-/g, "").slice(0, 12)
+      : Math.random().toString(36).slice(2, 14);
+    return `access-${Date.now()}-${randomPart}`;
   }
 
   function setProgressMergeListener(listener) {
@@ -531,6 +535,7 @@
   RocketMath.storage = {
     STORAGE_KEY,
     LEGACY_STORAGE_KEY,
+    ACCESS_SESSION_ID,
     createDefaultProgress,
     loadProgress,
     loadServerProgress,

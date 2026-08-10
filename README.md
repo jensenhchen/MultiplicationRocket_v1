@@ -57,9 +57,9 @@ An only-perfect pilot wins immediately. Otherwise, total competition stars decid
 
 ## Progress Data
 
-The Node server writes versioned progress to `data/progress.json`. The file is created automatically on the first run and contains CXY and Challenger settings, practice and competition history, retries, accuracy, question totals, and timing. The file is excluded from Git so deployment updates do not overwrite a child’s progress.
+The Node server creates one timestamped file per browser access session in `data/records/`, for example `record-access-1786321234567-a1b2c3d4.json`. At session start and during synchronization, it scans every record, de-duplicates mission/event IDs, and writes the combined snapshot to `data/progress.json`. Both the record directory and combined file are excluded from Git so deployment updates do not overwrite a child’s progress.
 
-The browser mirrors this data in `localStorage` so a temporary connection problem does not stop a mission. When the server is reachable again, new results are written to the server file.
+The browser mirrors this data in `localStorage` so a temporary connection problem does not stop a mission. When the server is reachable again, its current device snapshot is merged into that access session’s record and the combined result is returned to every connected browser.
 
 ## Run and Debug in VS Code
 
