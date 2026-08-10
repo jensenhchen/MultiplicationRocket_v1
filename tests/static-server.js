@@ -32,5 +32,5 @@ http.createServer((request, response) => {
   });
   fs.createReadStream(filePath).pipe(response);
 }).listen(port, "127.0.0.1", () => {
-  console.log(`Math JJCC Rocket test server: http://127.0.0.1:${port}/`);
+  console.log(`Math Rocket (JJCC) test server: http://127.0.0.1:${port}/`);
 });

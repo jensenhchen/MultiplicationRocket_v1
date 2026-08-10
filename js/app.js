@@ -15,7 +15,27 @@
     RocketMath.game.init(progress);
     ui.updateAudioButtons(RocketMath.audio.getSettings());
     bindEvents();
+    startProgressSync();
     registerServiceWorker();
+  }
+
+  function startProgressSync() {
+    let lastSyncAt = 0;
+    const sync = () => {
+      const now = Date.now();
+      if (now - lastSyncAt < 1200) return;
+      lastSyncAt = now;
+      RocketMath.storage.syncServerProgress().catch(() => {
+        // The local copy remains usable until the shared server is reachable.
+      });
+    };
+
+    window.setInterval(sync, 6000);
+    window.addEventListener("focus", sync);
+    window.addEventListener("online", sync);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") sync();
+    });
   }
 
   function bindEvents() {

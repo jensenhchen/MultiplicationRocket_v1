@@ -314,23 +314,32 @@
     const color = groupName === "challenger" ? "#7c5cff" : "#2478d8";
     const fill = groupName === "challenger" ? "#d9ccff" : "#bfe5ff";
     const xPositions = days.map((day, index) => 52 + index * 68);
-    const chartBottom = 138;
+    const chartTop = 68;
+    const chartBottom = 150;
+    const plotHeight = chartBottom - chartTop;
     const maximumQuestions = Math.max(10, ...days.map((day) => day.questions));
     const points = [];
 
     svg.classList.add("progress-chart");
-    svg.setAttribute("viewBox", "0 0 510 170");
+    svg.setAttribute("viewBox", "0 0 510 188");
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", `${RocketMath.questions.getGroup(groupName).name} questions and correct answers for the last seven days`);
 
-    [48, 78, 108, chartBottom].forEach((y) => {
+    svg.appendChild(svgNode(namespace, "rect", {
+      x: 22, y: 2, width: 466, height: 50, rx: 8, class: "chart-value-band"
+    }));
+    svg.appendChild(svgNode(namespace, "line", {
+      x1: 24, y1: 27, x2: 486, y2: 27, class: "chart-value-divider"
+    }));
+
+    [chartTop, 95, 122, chartBottom].forEach((y) => {
       svg.appendChild(svgNode(namespace, "line", { x1: 24, y1: y, x2: 486, y2: y, class: "chart-grid" }));
     });
 
     days.forEach((day, index) => {
       const x = xPositions[index];
-      const barHeight = (day.questions / maximumQuestions) * 72;
-      const accuracyY = chartBottom - (day.questions ? (day.correct / day.questions) : 0) * 82;
+      const barHeight = (day.questions / maximumQuestions) * plotHeight;
+      const accuracyY = chartBottom - (day.questions ? (day.correct / day.questions) : 0) * plotHeight;
       points.push(`${x},${accuracyY}`);
       svg.appendChild(svgNode(namespace, "rect", {
         x: x - 15,
@@ -343,10 +352,10 @@
       }));
       svg.appendChild(svgNode(namespace, "text", {
         x,
-        y: chartBottom - barHeight - 5,
-        class: "bar-value"
+        y: 44,
+        class: `bar-value ${String(day.questions).length > 5 ? "chart-value-compact" : ""}`
       }, `${day.questions}Q`));
-      svg.appendChild(svgNode(namespace, "text", { x, y: 163, class: "chart-date" }, day.label));
+      svg.appendChild(svgNode(namespace, "text", { x, y: 181, class: "chart-date" }, day.label));
     });
 
     svg.appendChild(svgNode(namespace, "polyline", {
@@ -360,12 +369,12 @@
     }));
     days.forEach((day, index) => {
       const x = xPositions[index];
-      const y = chartBottom - (day.questions ? (day.correct / day.questions) : 0) * 82;
+      const y = chartBottom - (day.questions ? (day.correct / day.questions) : 0) * plotHeight;
       svg.appendChild(svgNode(namespace, "circle", { cx: x, cy: y, r: 6, fill: color, class: "accuracy-point" }));
       svg.appendChild(svgNode(namespace, "text", {
         x,
-        y: 17,
-        class: "accuracy-value"
+        y: 19,
+        class: `accuracy-value ${`${day.correct}/${day.questions}`.length > 7 ? "chart-value-compact" : ""}`
       }, `${day.correct}/${day.questions}`));
     });
     return svg;

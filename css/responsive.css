@@ -2214,21 +2214,42 @@ body.is-result .result-panel {
 
 .icon-toggle {
   display: grid;
-  min-width: 62px;
-  min-height: 48px;
+  min-width: 54px;
+  min-height: 38px;
   align-content: center;
   gap: 1px;
+  padding: 4px 6px;
   line-height: 1;
   text-align: center;
 }
 
 .icon-toggle span {
-  font-size: 0.72rem;
+  font-size: 0.6rem;
 }
 
 .icon-toggle strong {
   color: var(--blue-dark);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
+}
+
+.chart-value-band {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: #dce9f3;
+  stroke-width: 1;
+}
+
+.chart-value-divider {
+  stroke: #e4edf5;
+  stroke-width: 1;
+}
+
+.bar-value,
+.accuracy-value {
+  font-size: 9px;
+}
+
+.chart-value-compact {
+  font-size: 7.25px;
 }
 
 .race-exit-dialog {
@@ -2298,15 +2319,50 @@ body.is-result .result-panel {
 }
 
 @media (max-width: 720px) {
+  .hero {
+    gap: 5px;
+  }
+
+  .hero-copy,
+  .hero h1 {
+    overflow: hidden;
+  }
+
+  .hero h1 {
+    gap: 4px;
+    font-size: clamp(0.92rem, 4vw, 1.2rem);
+  }
+
+  .hero h1 > span {
+    min-width: 0;
+    flex: 1 1 auto;
+    white-space: nowrap;
+  }
+
   .operator-title-image {
     width: clamp(38px, 12vw, 52px);
     height: 16px;
+    flex: 0 0 auto;
+  }
+
+  .hero-controls {
+    gap: 2px;
   }
 
   .icon-toggle {
-    min-width: 54px;
-    min-height: 43px;
-    padding: 5px 7px;
+    min-width: 40px;
+    min-height: 28px;
+    padding: 2px 4px;
+    border-radius: 7px;
+    box-shadow: 0 2px 0 #c5e4fb;
+  }
+
+  .icon-toggle span {
+    font-size: 0.45rem;
+  }
+
+  .icon-toggle strong {
+    font-size: 0.52rem;
   }
 }
 
@@ -2318,5 +2374,15 @@ body.is-result .result-panel {
 
   .race-exit-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 350px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .rocket-badge {
+    display: none;
   }
 }

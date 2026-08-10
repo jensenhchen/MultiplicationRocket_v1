@@ -2,7 +2,7 @@
 
 ## Product
 
-Math JJCC Rocket is an offline-friendly browser game that helps children around age 7–8 build fluency in addition, subtraction, multiplication, and division.
+Math Rocket (JJCC) is an offline-friendly browser game that helps children around age 7–8 build fluency in addition, subtraction, multiplication, and division.
 
 ## Goals
 

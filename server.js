@@ -355,7 +355,7 @@ function sendJson(response, status, value) {
 
 if (require.main === module) {
   createMathRocketServer().listen(DEFAULT_PORT, DEFAULT_HOST, () => {
-    console.log(`Math JJCC Rocket server: http://${DEFAULT_HOST}:${DEFAULT_PORT}/`);
+    console.log(`Math Rocket (JJCC) server: http://${DEFAULT_HOST}:${DEFAULT_PORT}/`);
     console.log(`Progress file: ${process.env.MATH_ROCKET_DATA_FILE || path.join(DEFAULT_ROOT, "data", "progress.json")}`);
   });
 }

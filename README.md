@@ -1,6 +1,6 @@
-# Math JJCC Rocket
+# Math Rocket (JJCC)
 
-Math JJCC Rocket is a cheerful browser game designed to help a seven-year-old build confidence and speed with mental arithmetic. Its main focus is making ten and breaking ten in addition and subtraction. A parent can join as Challenger to turn practice into a short, friendly competition.
+Math Rocket (JJCC) is a cheerful browser game designed to help a seven-year-old build confidence and speed with mental arithmetic. Its main focus is making ten and breaking ten in addition and subtraction. A parent can join as Challenger to turn practice into a short, friendly competition.
 
 The browser app uses HTML, CSS, and vanilla JavaScript. A small dependency-free Node.js server serves the app and stores shared CXY and Challenger progress in `data/progress.json`. Browser `localStorage` remains an offline fallback.
 
@@ -85,4 +85,4 @@ node tests/server.test.js
 
 ## Deployment and Offline Use
 
-Server-file persistence requires a Node.js host with a writable, persistent disk. The server serializes writes and merges session IDs so simultaneous PC, Android and iPad games do not overwrite one another. GitHub Pages can display the app but cannot write `data/progress.json`; use a Node-capable host for shared progress. Load the deployed game once while online to cache the app shell. On iPad or iPhone, use Safari’s **Add to Home Screen** action to install Math JJCC Rocket.
+Server-file persistence requires a Node.js host with a writable, persistent disk. The server serializes writes and merges session IDs so simultaneous PC, Android and iPad games do not overwrite one another. Connected clients refresh shared progress every six seconds and whenever the app regains focus. GitHub Pages can display the app but cannot write `data/progress.json`; use a Node-capable host for shared progress. Load the deployed game once while online to cache the app shell. On iPad or iPhone, use Safari’s **Add to Home Screen** action to install Math Rocket (JJCC).

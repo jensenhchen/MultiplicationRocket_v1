@@ -10,6 +10,8 @@
   let pendingServerProgress = null;
   let serverSaveTimer = null;
   let progressMergeListener = null;
+  let progressSyncPromise = null;
+  let serverPersistenceAvailable = null;
 
   function createEmptyStats() {
     return {
@@ -90,22 +92,34 @@
 
   async function loadServerProgress(fallbackProgress) {
     const fallback = normalizeProgress(fallbackProgress);
-    if (typeof window.fetch !== "function" || !/^https?:$/.test(window.location.protocol)) return fallback;
+    if (!canUseProgressServer()) return fallback;
 
-    const response = await window.fetch("./api/progress", {
+    const response = await window.fetch(getProgressApiUrl(), {
       cache: "no-store",
       headers: { Accept: "application/json" }
     });
+    if (response.status === 404) {
+      serverPersistenceAvailable = false;
+      throw new Error("Shared progress server is not available on this host.");
+    }
     if (response.status === 204) {
+      serverPersistenceAvailable = true;
       return (await saveProgressToServer(fallback)) || fallback;
     }
     if (!response.ok) throw new Error(`Progress server returned ${response.status}.`);
+    serverPersistenceAvailable = true;
     const remote = normalizeProgress(await response.json());
-    return saveLocalProgress(remote);
+    // Upload the device snapshot too: it may contain missions completed while offline.
+    try {
+      const combined = await saveProgressToServer(fallback);
+      return combined && typeof combined === "object" ? combined : saveLocalProgress(remote);
+    } catch (error) {
+      return saveLocalProgress(remote);
+    }
   }
 
   function scheduleServerSave(progress) {
-    if (typeof window.fetch !== "function" || !/^https?:$/.test(window.location.protocol)) return;
+    if (!canUseProgressServer()) return;
     pendingServerProgress = normalizeProgress(progress);
     if (serverSaveTimer) window.clearTimeout(serverSaveTimer);
     serverSaveTimer = window.setTimeout(() => {
@@ -119,13 +133,18 @@
   }
 
   async function saveProgressToServer(progress) {
-    if (!progress || typeof window.fetch !== "function") return false;
-    const response = await window.fetch("./api/progress", {
+    if (!progress || !canUseProgressServer()) return false;
+    const response = await window.fetch(getProgressApiUrl(), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(normalizeProgress(progress))
     });
+    if (response.status === 404) {
+      serverPersistenceAvailable = false;
+      throw new Error("Shared progress server is not available on this host.");
+    }
     if (!response.ok) throw new Error(`Progress server returned ${response.status}.`);
+    serverPersistenceAvailable = true;
     const payload = await response.json().catch(() => null);
     if (!payload || !payload.progress) return true;
     const merged = normalizeProgress(payload.progress);
@@ -135,6 +154,33 @@
       if (typeof progressMergeListener === "function") progressMergeListener(merged);
     }
     return merged;
+  }
+
+  function syncServerProgress() {
+    if (!canUseProgressServer()) return Promise.resolve(loadProgress());
+    if (progressSyncPromise) return progressSyncPromise;
+    progressSyncPromise = (async () => {
+      await flushServerSave();
+      const local = loadProgress();
+      const merged = await saveProgressToServer(local);
+      return merged && typeof merged === "object" ? merged : local;
+    })().finally(() => {
+      progressSyncPromise = null;
+    });
+    return progressSyncPromise;
+  }
+
+  function canUseProgressServer() {
+    return serverPersistenceAvailable !== false
+      && typeof window.fetch === "function"
+      && /^https?:$/.test(window.location.protocol);
+  }
+
+  function getProgressApiUrl() {
+    const configured = typeof window.MATH_ROCKET_API_URL === "string"
+      ? window.MATH_ROCKET_API_URL.trim()
+      : "";
+    return configured || "./api/progress";
   }
 
   function setProgressMergeListener(listener) {
@@ -490,6 +536,7 @@
     loadServerProgress,
     saveProgress,
     flushServerSave,
+    syncServerProgress,
     setProgressMergeListener,
     resetProgress,
     missionKey,

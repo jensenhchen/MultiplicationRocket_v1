@@ -9,7 +9,7 @@
 
 ## 2.0.0 - 2026-08-07
 
-- Expanded Math JJCC Rocket from a single-operation game to all four basic operations.
+- Expanded Math Rocket (JJCC) from a single-operation game to all four basic operations.
 - Added configurable operation sets, operand-count difficulty, and group-specific number ranges.
 - Renamed the second user-facing group to Challenger and added legacy local-data migration.
 - Added safe structured expression generation with exact division and non-negative integer steps.
