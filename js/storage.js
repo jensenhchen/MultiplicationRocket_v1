@@ -8,6 +8,7 @@
   const HISTORY_LIMIT = 2000;
   const COMPETITION_LIMIT = 500;
   const WRONG_QUESTION_LIMIT = 60;
+  const STAR_ADJUSTMENT_LIMIT = 4000;
   const DEVICE_ID = loadOrCreateDeviceId();
   let pendingServerProgress = null;
   let serverSaveTimer = null;
@@ -51,6 +52,7 @@
       wrongQuestions: [],
       completedRetries: [],
       retryHistory: [],
+      starAdjustments: [],
       lastPlayedDate: "",
       gamesPlayed: 0,
       legacyWeakTables: {}
@@ -351,6 +353,28 @@
     return saveProgress(progress);
   }
 
+  function adjustChallengerPracticeStars(currentProgress, requestedAmount, adjustedAt) {
+    const progress = normalizeProgress(currentProgress);
+    const step = Number(requestedAmount) < 0 ? -20 : 20;
+    const available = Math.max(0, Number(progress.groupStars.challenger) || 0);
+    const applied = step < 0 ? -Math.min(20, available) : 20;
+    if (!applied) return { progress, applied: 0 };
+
+    const adjustment = {
+      id: `star-adjustment-${DEVICE_ID}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      groupName: "challenger",
+      mode: "practice",
+      amount: applied,
+      adjustedAt: adjustedAt || RocketMath.utils.todayString(),
+      createdAt: new Date().toISOString()
+    };
+    progress.starAdjustments = [adjustment, ...progress.starAdjustments].slice(0, STAR_ADJUSTMENT_LIMIT);
+    progress.groupStars.challenger = Math.max(0, available + applied);
+    progress.totalStars = Math.max(0, Number(progress.groupStars.cxy) || 0) + progress.groupStars.challenger;
+    saveProgress(progress);
+    return { progress, applied, adjustment };
+  }
+
   function updateGroupStats(progress, result) {
     const groupName = normalizeGroupName(result.groupName);
     const stats = progress.groupStats[groupName] || createEmptyStats();
@@ -483,6 +507,16 @@
       })),
       completedRetries: normalizeArray(source.completedRetries, 4000).map(String),
       retryHistory: normalizeArray(source.retryHistory, HISTORY_LIMIT),
+      starAdjustments: normalizeArray(source.starAdjustments, STAR_ADJUSTMENT_LIMIT)
+        .map((item) => ({
+          id: String(item && item.id || ""),
+          groupName: "challenger",
+          mode: "practice",
+          amount: Math.max(-20, Math.min(20, Number(item && item.amount) || 0)),
+          adjustedAt: item && item.adjustedAt || "",
+          createdAt: item && item.createdAt || ""
+        }))
+        .filter((item) => item.id && item.amount),
       lastPlayedDate: source.lastPlayedDate || "",
       gamesPlayed: Math.max(0, Number(source.gamesPlayed) || 0),
       legacyWeakTables: source.legacyWeakTables && typeof source.legacyWeakTables === "object"
@@ -565,6 +599,7 @@
     recordRetryBonus,
     recordCompetition,
     recordConfig,
+    adjustChallengerPracticeStars,
     getFocusAreas,
     normalizeProgress
   };

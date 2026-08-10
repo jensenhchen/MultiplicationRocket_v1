@@ -512,6 +512,17 @@
     RocketMath.ui.renderProgress(state.progress);
   }
 
+  function adjustChallengerPracticeStars(amount) {
+    const adjusted = RocketMath.storage.adjustChallengerPracticeStars(
+      state.progress,
+      amount,
+      RocketMath.utils.todayString()
+    );
+    state.progress = adjusted.progress;
+    RocketMath.ui.renderProgress(state.progress);
+    return adjusted.applied;
+  }
+
   function resetProgress() {
     state.progress = RocketMath.storage.resetProgress();
     state.lastResult = null;
@@ -788,6 +799,7 @@
     answer,
     showHint,
     saveConfig,
+    adjustChallengerPracticeStars,
     resetProgress,
     showStart,
     leaveMission,

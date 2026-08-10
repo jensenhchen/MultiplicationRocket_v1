@@ -386,7 +386,6 @@
 }
 
 @media (max-width: 360px), (max-height: 640px) {
-  .hero p,
   .strategy-chip,
   .group-stats,
   .competition-tip {
@@ -433,10 +432,6 @@
     font-size: 1.75rem;
   }
 
-  .hero p {
-    display: none;
-  }
-
   .mission-options {
     grid-template-rows: repeat(3, minmax(48px, 1fr));
   }
@@ -455,14 +450,6 @@
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .hero {
-    display: none;
-  }
-
-  .game-shell {
-    grid-template-rows: minmax(0, 1fr);
-  }
-
   .play-hud {
     grid-template-columns: 1fr 1.5fr 70px;
   }
@@ -2385,4 +2372,58 @@ body.is-result .result-panel {
   .rocket-badge {
     display: none;
   }
+}
+
+/* Keep the learning message visible in mobile browsers and installed PWAs. */
+@media (max-width: 720px), (display-mode: standalone) {
+  .hero p {
+    display: block;
+    overflow: visible;
+    font-size: clamp(0.56rem, 2.4vw, 0.72rem);
+    line-height: 1.15;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
+.operator-title-image {
+  -webkit-user-drag: none;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.hero h1.secret-star-change {
+  position: relative;
+  overflow: visible;
+}
+
+.hero h1.secret-star-change::after {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  right: 0;
+  padding: 4px 9px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #663d00;
+  background: #ffd45f;
+  box-shadow: 0 4px 0 #e3a723, 0 8px 18px rgba(55, 38, 0, 0.2);
+  content: attr(data-secret-star);
+  font-size: clamp(0.72rem, 2.2vw, 1rem);
+  font-weight: 1000;
+  pointer-events: none;
+  animation: secret-star-pop 1.35s ease both;
+}
+
+.hero h1.secret-star-decrease::after {
+  color: #5e345f;
+  background: #e9d7ff;
+  box-shadow: 0 4px 0 #a981db, 0 8px 18px rgba(65, 31, 95, 0.2);
+}
+
+@keyframes secret-star-pop {
+  0% { opacity: 0; transform: translate(25%, -50%) scale(0.35) rotate(-10deg); }
+  30% { opacity: 1; transform: translate(25%, -110%) scale(1.18) rotate(5deg); }
+  75% { opacity: 1; transform: translate(25%, -120%) scale(1); }
+  100% { opacity: 0; transform: translate(25%, -175%) scale(0.82); }
 }

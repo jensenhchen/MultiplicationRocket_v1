@@ -75,6 +75,49 @@ const updateResponse = await call(database, "PUT", {
 const update = await updateResponse.json();
 assert.equal(update.deviceCount, 3, "one stable device row must be reused");
 assert.equal(update.progress.totalStars, 18, "re-uploading one snapshot must not duplicate stars");
+
+const addAdjustment = {
+  id: "hidden-adjustment-add",
+  groupName: "challenger",
+  mode: "practice",
+  amount: 20,
+  adjustedAt: "2026-08-10",
+  createdAt: "2026-08-10T12:00:00.000Z"
+};
+const subtractAdjustment = {
+  id: "hidden-adjustment-subtract",
+  groupName: "challenger",
+  mode: "practice",
+  amount: -20,
+  adjustedAt: "2026-08-10",
+  createdAt: "2026-08-10T12:01:00.000Z"
+};
+const addedResponse = await call(database, "POST", {
+  deviceId: "device-parent-adjust",
+  progress: {
+    version: 4,
+    totalStars: 20,
+    groupStars: { cxy: 0, challenger: 20 },
+    starAdjustments: [addAdjustment]
+  }
+});
+const added = await addedResponse.json();
+assert.equal(added.progress.groupStars.challenger, 20);
+assert.equal(added.progress.totalStars, 38);
+
+const subtractedResponse = await call(database, "PUT", {
+  deviceId: "device-parent-adjust",
+  progress: {
+    version: 4,
+    totalStars: 0,
+    groupStars: { cxy: 0, challenger: 0 },
+    starAdjustments: [addAdjustment, subtractAdjustment]
+  }
+});
+const subtracted = await subtractedResponse.json();
+assert.equal(subtracted.progress.groupStars.challenger, 0, "a synchronized negative adjustment must be retained");
+assert.equal(subtracted.progress.totalStars, 18);
+assert.equal(subtracted.progress.starAdjustments.length, 2);
 assert.equal((await call(database, "GET", null, "https://malicious.example")).status, 403);
 
 console.log("Cloudflare D1 device snapshot, aggregation, concurrency, and CORS tests passed.");

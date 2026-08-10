@@ -6,6 +6,9 @@
 
   const elements = {
     app: document.querySelector("#app"),
+    heroTitle: document.querySelector(".hero h1"),
+    operatorTitleImage: document.querySelector(".operator-title-image"),
+    hiddenStarFeedback: document.querySelector("#hidden-star-feedback"),
     startScreen: document.querySelector("#start-screen"),
     gameScreen: document.querySelector("#game-screen"),
     resultScreen: document.querySelector("#result-screen"),
@@ -70,6 +73,7 @@
     continueRaceButton: document.querySelector("#continue-race-button"),
     exitRaceButton: document.querySelector("#exit-race-button")
   };
+  let secretStarFeedbackTimer = null;
 
   function showScreen(screenName) {
     elements.startScreen.classList.toggle("hidden", screenName !== "start");
@@ -228,10 +232,17 @@
         + (Number(item.baseStars) || 0)
         + (Number(item.speedStars) || 0)
         + (Number(item.dailyGoalBonus) || 0), 0);
+    const adjustmentToday = (Array.isArray(progress.starAdjustments) ? progress.starAdjustments : [])
+      .filter((item) => item.groupName === groupName
+        && (item.mode || "practice") === "practice"
+        && item.adjustedAt === todayKey)
+      .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     return {
       total: Math.max(0, Number(progress.groupStars && progress.groupStars[groupName]) || 0),
-      practiceToday: historyStars(Array.isArray(progress.practiceHistory) ? progress.practiceHistory : [])
-        + retryStars("practice"),
+      practiceToday: Math.max(0,
+        historyStars(Array.isArray(progress.practiceHistory) ? progress.practiceHistory : [])
+        + retryStars("practice")
+        + adjustmentToday),
       competitionToday: historyStars(Array.isArray(progress.competitionTurnHistory) ? progress.competitionTurnHistory : [])
         + retryStars("competition")
     };
@@ -769,6 +780,25 @@
     window.setTimeout(() => document.body.classList.remove("is-celebrating"), 2400);
   }
 
+  function showSecretStarFeedback(amount) {
+    if (!elements.heroTitle || !elements.hiddenStarFeedback || !amount) return;
+    if (secretStarFeedbackTimer) window.clearTimeout(secretStarFeedbackTimer);
+    const isIncrease = amount > 0;
+    const label = `${isIncrease ? "+" : ""}${amount}⭐`;
+    elements.heroTitle.classList.remove("secret-star-change", "secret-star-decrease");
+    elements.heroTitle.dataset.secretStar = label;
+    // Force a fresh animation even when the hidden control is used repeatedly.
+    void elements.heroTitle.offsetWidth;
+    elements.heroTitle.classList.add("secret-star-change");
+    if (!isIncrease) elements.heroTitle.classList.add("secret-star-decrease");
+    elements.hiddenStarFeedback.textContent = `Challenger Practice today ${label}`;
+    secretStarFeedbackTimer = window.setTimeout(() => {
+      elements.heroTitle.classList.remove("secret-star-change", "secret-star-decrease");
+      delete elements.heroTitle.dataset.secretStar;
+      secretStarFeedbackTimer = null;
+    }, 1400);
+  }
+
   RocketMath.ui = {
     elements,
     showScreen,
@@ -795,7 +825,8 @@
     renderResult,
     renderCompetitionPrompt,
     renderCompetitionResult,
-    celebrate
+    celebrate,
+    showSecretStarFeedback
   };
 
   window.RocketMath = RocketMath;

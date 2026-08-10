@@ -3,6 +3,8 @@
 
   const RocketMath = window.RocketMath;
   const ui = RocketMath.ui;
+  let operatorClickTimer = null;
+  let operatorFirstClickAt = 0;
 
   async function boot() {
     const localProgress = RocketMath.storage.loadProgress();
@@ -39,6 +41,30 @@
   }
 
   function bindEvents() {
+    if (ui.elements.operatorTitleImage) {
+      ui.elements.operatorTitleImage.addEventListener("click", (event) => {
+        event.preventDefault();
+        const now = Date.now();
+        const isDoubleClick = operatorClickTimer && now - operatorFirstClickAt <= 380;
+        if (isDoubleClick) {
+          window.clearTimeout(operatorClickTimer);
+          operatorClickTimer = null;
+          operatorFirstClickAt = 0;
+          applyHiddenChallengerAdjustment(-20);
+          return;
+        }
+
+        if (operatorClickTimer) window.clearTimeout(operatorClickTimer);
+        operatorFirstClickAt = now;
+        operatorClickTimer = window.setTimeout(() => {
+          operatorClickTimer = null;
+          operatorFirstClickAt = 0;
+          applyHiddenChallengerAdjustment(20);
+        }, 300);
+      });
+      ui.elements.operatorTitleImage.addEventListener("dblclick", (event) => event.preventDefault());
+    }
+
     ui.elements.configSelects.forEach((select) => {
       select.addEventListener("focus", () => {
         const label = select.closest("label");
@@ -158,6 +184,14 @@
       const button = buttons[Number(event.key) - 1];
       if (button) button.click();
     });
+  }
+
+  function applyHiddenChallengerAdjustment(amount) {
+    RocketMath.audio.unlock();
+    const applied = RocketMath.game.adjustChallengerPracticeStars(amount);
+    if (!applied) return;
+    RocketMath.audio.play(applied > 0 ? "complete" : "wrong");
+    ui.showSecretStarFeedback(applied);
   }
 
   function registerServiceWorker() {

@@ -111,25 +111,32 @@ export function mergeProgressRecords(existingValue, incomingValue) {
   const retryHistory = mergeEvents(existing.retryHistory, incoming.retryHistory, "retryId", 2000);
   const competitionHistory = mergeEvents(existing.competitionHistory, incoming.competitionHistory, "id", 1000);
   const wrongQuestions = mergeEvents(existing.wrongQuestions, incoming.wrongQuestions, "id", 2000, true);
+  const starAdjustments = mergeEvents(existing.starAdjustments, incoming.starAdjustments, "id", 4000);
   normalizeDailyGoalBonuses([...practiceHistory, ...competitionTurnHistory]);
 
   const eventStars = calculateEventStars(practiceHistory, competitionTurnHistory, retryHistory);
+  const adjustmentStars = calculateAdjustmentStars(starAdjustments);
   const existingEventStars = calculateEventStars(
     arrayValue(existing.practiceHistory), arrayValue(existing.competitionTurnHistory), arrayValue(existing.retryHistory)
   );
   const incomingEventStars = calculateEventStars(
     arrayValue(incoming.practiceHistory), arrayValue(incoming.competitionTurnHistory), arrayValue(incoming.retryHistory)
   );
+  const existingAdjustmentStars = calculateAdjustmentStars(arrayValue(existing.starAdjustments));
+  const incomingAdjustmentStars = calculateAdjustmentStars(arrayValue(incoming.starAdjustments));
   const legacyStars = {
-    cxy: Math.max(unexplainedGroupStars(existing, existingEventStars, "cxy"), unexplainedGroupStars(incoming, incomingEventStars, "cxy")),
+    cxy: Math.max(
+      unexplainedGroupStars(existing, existingEventStars, existingAdjustmentStars, "cxy"),
+      unexplainedGroupStars(incoming, incomingEventStars, incomingAdjustmentStars, "cxy")
+    ),
     challenger: Math.max(
-      unexplainedGroupStars(existing, existingEventStars, "challenger"),
-      unexplainedGroupStars(incoming, incomingEventStars, "challenger")
+      unexplainedGroupStars(existing, existingEventStars, existingAdjustmentStars, "challenger"),
+      unexplainedGroupStars(incoming, incomingEventStars, incomingAdjustmentStars, "challenger")
     )
   };
   const groupStars = {
-    cxy: legacyStars.cxy + eventStars.cxy,
-    challenger: legacyStars.challenger + eventStars.challenger
+    cxy: Math.max(0, legacyStars.cxy + eventStars.cxy + adjustmentStars.cxy),
+    challenger: Math.max(0, legacyStars.challenger + eventStars.challenger + adjustmentStars.challenger)
   };
   const mergedTurns = [...practiceHistory, ...competitionTurnHistory];
 
@@ -157,6 +164,7 @@ export function mergeProgressRecords(existingValue, incomingValue) {
       ...arrayValue(incoming.completedRetries).map(String)
     ])].slice(0, 4000),
     retryHistory,
+    starAdjustments,
     lastPlayedDate: latestText(existing.lastPlayedDate, incoming.lastPlayedDate, ...mergedTurns.map((item) => item.playedAt)),
     gamesPlayed: mergedTurns.length
   };
@@ -208,16 +216,28 @@ function calculateEventStars(practiceHistory, competitionTurnHistory, retryHisto
   return totals;
 }
 
+function calculateAdjustmentStars(adjustments) {
+  const totals = { cxy: 0, challenger: 0 };
+  adjustments.forEach((item) => {
+    if (normalizeGroupName(item && item.groupName) !== "challenger") return;
+    totals.challenger += Math.max(-20, Math.min(20, numberValue(item.amount)));
+  });
+  return totals;
+}
+
 function eventValue(item) {
   return Math.max(0, numberValue(item.baseStars))
     + Math.max(0, numberValue(item.speedStars))
     + Math.max(0, numberValue(item.dailyGoalBonus));
 }
 
-function unexplainedGroupStars(progress, eventStars, groupName) {
+function unexplainedGroupStars(progress, eventStars, adjustmentStars, groupName) {
   const stored = objectValue(progress.groupStars);
   const legacyName = groupName === "challenger" ? "cxr" : groupName;
-  return Math.max(0, numberValue(stored[groupName] != null ? stored[groupName] : stored[legacyName]) - eventStars[groupName]);
+  return Math.max(0,
+    numberValue(stored[groupName] != null ? stored[groupName] : stored[legacyName])
+    - eventStars[groupName]
+    - adjustmentStars[groupName]);
 }
 
 function buildGroupStats(turns, groupName) {

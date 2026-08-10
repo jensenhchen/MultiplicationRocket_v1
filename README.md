@@ -16,6 +16,8 @@ The browser app uses HTML, CSS, and vanilla JavaScript. GitHub Pages hosts the s
 - Age-appropriate number, result, multiplication, and division limits
 - Seven-day question-volume bars, correct/total curves, daily star summaries, and a 210-question goal (30 per day) for each group
 - Shared Cloudflare D1 progress with automatic on-device fallback
+- Hidden parent star adjustment on the title operator image: single-click adds 20 Challenger Practice-today stars; double-click removes 20
+- The full addition/subtraction/multiplication/division subtitle remains visible on mobile browsers and installed PWAs
 - Large animated star and trophy celebrations
 - Supportive feedback after competition mistakes and congratulations for progress and wins
 - Music, sound effects, rocket animation, confetti, and encouraging English messages
@@ -58,6 +60,8 @@ An only-perfect pilot wins immediately. Otherwise, total competition stars decid
 ## Progress Data
 
 The timestamped record-file design has been removed. Each browser receives one stable, locally stored device ID. The Cloudflare Worker keeps one current snapshot per device in D1 and merges all unique practice, competition, and review IDs before responding. Separate device rows prevent concurrent Edge, Chrome, Android, and iPad saves from overwriting one another, while de-duplication prevents a repeated upload from awarding stars twice.
+
+Hidden Challenger adjustments are stored as unique positive or negative star events. This allows a subtraction to synchronize correctly instead of being replaced by an older, larger total from another browser.
 
 The browser mirrors this data in `localStorage` so a temporary connection problem does not stop a mission. When the service is reachable again, the local snapshot is uploaded and the combined result is returned. Connected clients refresh shared progress every six seconds and whenever the app regains focus.
 

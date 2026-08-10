@@ -125,6 +125,18 @@ let progress = storage.createDefaultProgress();
 assert.equal(progress.configs.cxy.difficulty, "easy");
 assert.equal(progress.configs.challenger.rangeMax, 25);
 assert.equal(RocketMath.questions.normalizeOptions({ groupName: "cxy" }).difficulty, "easy");
+let hiddenAdjustment = storage.adjustChallengerPracticeStars(progress, 20, "2026-08-10");
+assert.equal(hiddenAdjustment.applied, 20);
+assert.equal(hiddenAdjustment.progress.groupStars.challenger, 20);
+assert.equal(hiddenAdjustment.progress.totalStars, 20);
+assert.equal(hiddenAdjustment.progress.starAdjustments.length, 1);
+hiddenAdjustment = storage.adjustChallengerPracticeStars(hiddenAdjustment.progress, -20, "2026-08-10");
+assert.equal(hiddenAdjustment.applied, -20);
+assert.equal(hiddenAdjustment.progress.groupStars.challenger, 0);
+assert.equal(hiddenAdjustment.progress.totalStars, 0);
+assert.equal(hiddenAdjustment.progress.starAdjustments.length, 2);
+const emptyDecrease = storage.adjustChallengerPracticeStars(storage.createDefaultProgress(), -20, "2026-08-10");
+assert.equal(emptyDecrease.applied, 0, "the hidden decrease must never make Challenger stars negative");
 const result = {
   sessionId: "practice-one",
   mode: "practice",
