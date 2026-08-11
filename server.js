@@ -98,27 +98,9 @@ function mergeProgressRecords(existingValue, incomingValue) {
 
   const eventStars = calculateEventStars(practiceHistory, competitionTurnHistory, retryHistory);
   const adjustmentStars = calculateAdjustmentStars(starAdjustments);
-  const existingEventStars = calculateEventStars(
-    arrayValue(existing.practiceHistory),
-    arrayValue(existing.competitionTurnHistory),
-    arrayValue(existing.retryHistory)
-  );
-  const incomingEventStars = calculateEventStars(
-    arrayValue(incoming.practiceHistory),
-    arrayValue(incoming.competitionTurnHistory),
-    arrayValue(incoming.retryHistory)
-  );
-  const existingAdjustmentStars = calculateAdjustmentStars(arrayValue(existing.starAdjustments));
-  const incomingAdjustmentStars = calculateAdjustmentStars(arrayValue(incoming.starAdjustments));
   const legacyStars = {
-    cxy: Math.max(
-      unexplainedGroupStars(existing, existingEventStars, existingAdjustmentStars, "cxy"),
-      unexplainedGroupStars(incoming, incomingEventStars, incomingAdjustmentStars, "cxy")
-    ),
-    challenger: Math.max(
-      unexplainedGroupStars(existing, existingEventStars, existingAdjustmentStars, "challenger"),
-      unexplainedGroupStars(incoming, incomingEventStars, incomingAdjustmentStars, "challenger")
-    )
+    cxy: Math.max(legacyGroupStars(existing, "cxy"), legacyGroupStars(incoming, "cxy")),
+    challenger: Math.max(legacyGroupStars(existing, "challenger"), legacyGroupStars(incoming, "challenger"))
   };
   const groupStars = {
     cxy: Math.max(0, legacyStars.cxy + eventStars.cxy + adjustmentStars.cxy),
@@ -135,6 +117,7 @@ function mergeProgressRecords(existingValue, incomingValue) {
     updatedAt: new Date().toISOString(),
     totalStars: groupStars.cxy + groupStars.challenger,
     groupStars,
+    legacyGroupStars: legacyStars,
     configs: {
       ...objectValue(existing.configs),
       ...objectValue(incoming.configs)
@@ -221,13 +204,15 @@ function eventValue(item) {
     + Math.max(0, numberValue(item.dailyGoalBonus));
 }
 
-function unexplainedGroupStars(progress, eventStars, adjustmentStars, groupName) {
-  const stored = objectValue(progress.groupStars);
+function legacyGroupStars(progress, groupName) {
+  const explicit = objectValue(progress.legacyGroupStars);
   const legacyName = groupName === "challenger" ? "cxr" : groupName;
-  return Math.max(0,
-    numberValue(stored[groupName] != null ? stored[groupName] : stored[legacyName])
-    - eventStars[groupName]
-    - adjustmentStars[groupName]);
+  if (explicit[groupName] != null || explicit[legacyName] != null) {
+    return Math.max(0, numberValue(explicit[groupName] != null ? explicit[groupName] : explicit[legacyName]));
+  }
+  if (numberValue(progress.version) >= 4) return 0;
+  const stored = objectValue(progress.groupStars);
+  return Math.max(0, numberValue(stored[groupName] != null ? stored[groupName] : stored[legacyName]));
 }
 
 function buildGroupStats(turns, groupName) {

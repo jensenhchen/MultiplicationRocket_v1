@@ -76,6 +76,21 @@ const update = await updateResponse.json();
 assert.equal(update.deviceCount, 3, "one stable device row must be reused");
 assert.equal(update.progress.totalStars, 18, "re-uploading one snapshot must not duplicate stars");
 
+const pollutedSnapshot = {
+  ...progress("polluted-mission", 4),
+  totalStars: 23004,
+  groupStars: { cxy: 4, challenger: 23000 }
+};
+const repairedResponse = await call(database, "POST", {
+  deviceId: "device-polluted-legacy-total",
+  progress: pollutedSnapshot
+});
+const repaired = await repairedResponse.json();
+assert.equal(repaired.progress.groupStars.challenger, 0,
+  "a version 4 derived snapshot total must never be imported as legacy Challenger stars");
+assert.equal(repaired.progress.totalStars, 23,
+  "only unique earning events should be counted when a polluted snapshot is merged");
+
 const addAdjustment = {
   id: "hidden-adjustment-add",
   groupName: "challenger",
@@ -103,7 +118,7 @@ const addedResponse = await call(database, "POST", {
 });
 const added = await addedResponse.json();
 assert.equal(added.progress.groupStars.challenger, 20);
-assert.equal(added.progress.totalStars, 38);
+assert.equal(added.progress.totalStars, 43);
 
 const subtractedResponse = await call(database, "PUT", {
   deviceId: "device-parent-adjust",
@@ -116,7 +131,7 @@ const subtractedResponse = await call(database, "PUT", {
 });
 const subtracted = await subtractedResponse.json();
 assert.equal(subtracted.progress.groupStars.challenger, 0, "a synchronized negative adjustment must be retained");
-assert.equal(subtracted.progress.totalStars, 18);
+assert.equal(subtracted.progress.totalStars, 23);
 assert.equal(subtracted.progress.starAdjustments.length, 2);
 assert.equal((await call(database, "GET", null, "https://malicious.example")).status, 403);
 
